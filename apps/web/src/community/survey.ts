@@ -2,11 +2,13 @@ import { z } from "zod";
 
 export const SURVEY_TITLE = "Help shape the bb community";
 export const SURVEY_DESCRIPTION =
-  "We want to continue building with you and would love to know what you'd want to see from the bb community. From meetups to merch to whatever you'd like. This survey should take ~2 minutes.";
+  "We want to continue building with you and would love to know what you'd want to see from the bb community. From meetups to merch to whatever you'd like. This survey should take ~3 minutes.";
 export const SURVEY_PURPOSE =
   "As a small thank you, we'll send you bb stickers. Thanks for building with us!";
 export const MEETUP_FRAMING =
   "We're starting bb meetups: small get-togethers to build with agents and see how other people work. Tell us where you are so we know where to start.";
+export const TEAM_WORK_OPTIONS = ["2–4 people", "5 or more"];
+export const STICKER_TIMING = "We'll mail your stickers within about a month.";
 export const MEETUP_DECLINE = "Not for me right now";
 export const SOLD_OUT =
   "We've given out all the stickers for now. Thank you for answering.";
@@ -64,6 +66,27 @@ export const surveyQuestions: readonly Question[] = [
       "Student",
       "Other",
     ],
+    placeholder: "",
+  },
+  {
+    name: "love",
+    label: "What do you love most about bb, and why?",
+    type: "textarea",
+    options: [],
+    placeholder: "",
+  },
+  {
+    name: "improve",
+    label: "What would make bb better for you?",
+    type: "textarea",
+    options: [],
+    placeholder: "",
+  },
+  {
+    name: "team_improve",
+    label: "What would make bb better for your team at work?",
+    type: "textarea",
+    options: [],
     placeholder: "",
   },
   {
@@ -157,6 +180,11 @@ export function validateSurvey(values: FormValues): FormErrors {
 export function surveyAnswers(values: FormValues): FormValues {
   const answers: FormValues = {};
   for (const name of surveyFields) {
+    if (
+      name === "team_improve" &&
+      !TEAM_WORK_OPTIONS.includes(values.work?.[0] ?? "")
+    )
+      continue;
     if (
       name.endsWith("_other") &&
       !values[name.slice(0, -6)]?.includes("Other")

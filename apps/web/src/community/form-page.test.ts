@@ -58,10 +58,20 @@ describe("survey page", () => {
       disabled: false,
     };
     let otherChecked = true;
+    let work = "2–4 people";
+    const textarea = { value: "Shared sessions" };
+    const team = {
+      hidden: false,
+      disabled: false,
+      querySelector: () => textarea,
+    };
     let update = () => {};
     const form = {
-      elements: { namedItem: () => ({ value: "" }) },
+      elements: {
+        namedItem: (name: string) => ({ value: name === "work" ? work : "" }),
+      },
       querySelector: (selector: string) => {
+        if (selector === '[data-question="team_improve"]') return team;
         if (selector === "[data-meetup-label]") return { textContent: "" };
         expect(selector).toBe('[name="community"][value="Other"]:checked');
         return otherChecked ? { value: "Other" } : null;
@@ -75,6 +85,18 @@ describe("survey page", () => {
       document: { querySelector: () => form },
       matchMedia: () => ({ addEventListener: () => {} }),
     });
+    expect(team.hidden).toBe(false);
+    expect(textarea.value).toBe("Shared sessions");
+    work = "Just me";
+    update();
+    expect(team.hidden).toBe(true);
+    expect(team.disabled).toBe(true);
+    expect(textarea.value).toBe("");
+    work = "5 or more";
+    update();
+    expect(team.hidden).toBe(false);
+    expect(team.disabled).toBe(false);
+    expect(textarea.value).toBe("");
     expect(otherInput.hidden).toBe(false);
     expect(otherInput.disabled).toBe(false);
     otherChecked = false;

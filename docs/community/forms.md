@@ -1,6 +1,6 @@
 # Community forms
 
-`/community/survey` serves six optional questions followed by required email. `/community/merch?c=CODE` validates an issued code and opens an encrypted Jotform form. Both are standalone documents with the bb wordmark, no analytics or hydration client, `noindex, nofollow`, `Cache-Control: no-store`, and a restrictive Content Security Policy. The survey uses `Referrer-Policy: same-origin` to support its POST; merch pages, external form links and embeds suppress referrers so bearer codes cannot reach analytics on other pages. Neither appears in navigation or the sitemap.
+`/community/survey` serves up to nine optional questions followed by required email. `/community/merch?c=CODE` validates an issued code and opens an encrypted Jotform form. Both are standalone documents with the bb wordmark, no analytics or hydration client, `noindex, nofollow`, `Cache-Control: no-store`, and a restrictive Content Security Policy. The survey uses `Referrer-Policy: same-origin` to support its POST; merch pages, external form links and embeds suppress referrers so bearer codes cannot reach analytics on other pages. Neither appears in navigation or the sitemap.
 
 ## Configuration and launch
 
@@ -16,7 +16,7 @@ The shared review preview keeps collection off and the form URL empty. Local syn
 
 ## Survey submission contract
 
-POST `application/x-www-form-urlencoded` to `/community/survey` with the `submission_id` UUID from the page. The question fields are `discovery`, `work`, `role`, `city`, `meetup` and `community`. Radio answers accept one listed choice; meetup and community checkbox answers repeat their field name. All six questions may be skipped. Only Q1's first seven choices are shuffled; “I don't remember” and “Other” remain last in that order. Q2 and Q3 keep their listed order. Q6 shuffles all choices except “Other”, which remains last. “Not for me right now” is exclusive with other meetup answers, enforced in the browser and on the server.
+POST `application/x-www-form-urlencoded` to `/community/survey` with the `submission_id` UUID from the page. The question fields are `discovery`, `work`, `role`, `love`, `improve`, `team_improve`, `city`, `meetup` and `community`. Radio answers accept one listed choice; meetup and community checkbox answers repeat their field name. All questions may be skipped. `team_improve` is shown only for work answers “2–4 people” or “5 or more”; otherwise its value is cleared in the browser and discarded before server validation and storage. Only Q1's first seven choices are shuffled; “I don't remember” and “Other” remain last in that order. Q2 and Q3 keep their listed order. The community question shuffles all choices except “Other”, which remains last. “Not for me right now” is exclusive with other meetup answers, enforced in the browser and on the server.
 
 `discovery_other`, `role_other` and `community_other` accept optional text when the corresponding “Other” option is selected; otherwise they are discarded. `email` is required, accepts one value, and is stored with the answers in the private survey response. Email must be valid. Text fields accept up to 250 characters. Removed questions and contact fields are rejected.
 

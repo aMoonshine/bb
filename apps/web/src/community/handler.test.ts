@@ -185,6 +185,56 @@ describe("private community forms", () => {
       }),
     );
   });
+  it.each([
+    "2–4 people",
+    "5 or more",
+    "Just me",
+    "I don't use bb for work",
+    "I'm not sure",
+    "",
+  ])(
+    "stores experience answers and discards inapplicable team feedback for %s",
+    async (work) => {
+      const id = crypto.randomUUID();
+      const teamVisible = work === "2–4 people" || work === "5 or more";
+      const response = await submit(id, {
+        ...(work ? { work } : {}),
+        love: "Fast iteration",
+        improve: "Better search",
+        team_improve: teamVisible ? "Shared sessions" : "x".repeat(251),
+      });
+      expect(response.status).toBe(200);
+      const answers = await db
+        .prepare("SELECT answers FROM community_survey_response WHERE id = ?")
+        .bind(id)
+        .first<string>("answers");
+      expect(JSON.parse(answers!)).toEqual({
+        ...(work ? { work: [work] } : {}),
+        love: ["Fast iteration"],
+        improve: ["Better search"],
+        ...(teamVisible ? { team_improve: ["Shared sessions"] } : {}),
+        email: ["ada@example.test"],
+      });
+    },
+  );
+  it.each(["love", "improve", "team_improve"])(
+    "rejects overlong %s without saving",
+    async (field) => {
+      expect(
+        (
+          await submit(crypto.randomUUID(), {
+            work: "5 or more",
+            [field]: "x".repeat(251),
+          })
+        ).status,
+      ).toBe(400);
+      expect(
+        await db
+          .prepare("SELECT COUNT(*) AS n FROM community_survey_response")
+          .first("n"),
+      ).toBe(0);
+    },
+  );
   it("caps concurrent allocations at 250 and still accepts answers when sold out", async () => {
     await db
       .prepare(

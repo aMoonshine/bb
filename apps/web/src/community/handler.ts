@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Env } from "../server/env";
 import { formPage, type FormKind } from "./form-page";
 import {
+  TEAM_WORK_OPTIONS,
   surveyFields,
   surveyAnswers,
   validateSurvey,
@@ -160,6 +161,8 @@ export async function handleCommunityForm(
         "We couldn't read that response. Please fill out the form again.",
     });
   }
+  if (!TEAM_WORK_OPTIONS.includes(values.work?.[0] ?? ""))
+    delete values.team_improve;
   const parsedId = z
     .uuid()
     .safeParse(
