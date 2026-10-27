@@ -95,10 +95,11 @@ import {
 import { sdk } from "@/lib/sdk";
 import {
   isReleaseVersion,
-  resolveReleaseWidgetTargetVersion,
-  type ReleaseWidgetTargetInput,
-} from "@/components/sidebar/release-widget-model";
+  resolveReleaseUpdateVersion,
+  type ReleaseVersionInput,
+} from "./release-notes-model";
 import { getReleaseNotesUrl, viewReleaseNotes } from "./release-notes";
+import { ReleaseNotesPreview } from "./ReleaseNotesPreview";
 
 const BULK_RETRY_THRESHOLD = 1;
 
@@ -1700,25 +1701,24 @@ function useNow(intervalMs: number): number {
   return now;
 }
 
-function resolveReleaseNotesVersion({
-  isDesktop,
-  desktopInfo,
-  appUpdate,
-  systemVersion,
-}: ReleaseWidgetTargetInput): string | null {
-  const target = resolveReleaseWidgetTargetVersion({
-    isDesktop,
-    desktopInfo,
-    appUpdate,
-    systemVersion,
-  });
+function resolveReleaseNotesVersion(input: ReleaseVersionInput): {
+  version: string | null;
+  updateAvailable: boolean;
+} {
+  const target = resolveReleaseUpdateVersion(input);
   if (target !== null) {
-    return target;
+    return { version: target, updateAvailable: true };
   }
-  const installed = isDesktop
-    ? (desktopInfo?.version ?? null)
-    : (appUpdate?.current.version ?? systemVersion?.currentVersion ?? null);
-  return installed !== null && isReleaseVersion(installed) ? installed : null;
+  const installed = input.isDesktop
+    ? (input.desktopInfo?.version ?? null)
+    : (input.appUpdate?.current.version ??
+      input.systemVersion?.currentVersion ??
+      null);
+  return {
+    version:
+      installed !== null && isReleaseVersion(installed) ? installed : null,
+    updateAvailable: false,
+  };
 }
 
 function resolveDesktopReleaseNotesVersion(
@@ -1876,14 +1876,13 @@ export function UpdatesSettingsSection() {
         };
   const useServerUpdate =
     serverRunsSeparately || appUpdate?.desktopUpdateSupported === true;
-  const releaseNotes = releaseNotesLinkFor(
-    resolveReleaseNotesVersion({
-      isDesktop: !useServerUpdate && isDesktop,
-      desktopInfo: useServerUpdate ? null : desktopInfo,
-      appUpdate,
-      systemVersion: inventory.systemVersion,
-    }),
-  );
+  const releaseNotesVersion = resolveReleaseNotesVersion({
+    isDesktop: !useServerUpdate && isDesktop,
+    desktopInfo: useServerUpdate ? null : desktopInfo,
+    appUpdate,
+    systemVersion: inventory.systemVersion,
+  });
+  const releaseNotes = releaseNotesLinkFor(releaseNotesVersion.version);
   const desktopReleaseNotes = releaseNotesLinkFor(
     resolveDesktopReleaseNotesVersion(desktopInfo),
   );
@@ -1947,6 +1946,7 @@ export function UpdatesSettingsSection() {
         {serverRunsSeparately && desktopRowNeedsAttention(desktopInfo)
           ? desktopClientRow
           : null}
+        <ReleaseNotesPreview {...releaseNotesVersion} />
       </BbUpdatesCard>
 
       <ProviderCliUpdatesSection

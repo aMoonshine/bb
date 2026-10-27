@@ -282,9 +282,9 @@ first-send events through `POST /api/v1/system/telemetry/events`
 `onboarding_step_reached`, `onboarding_step_completed`,
 `onboarding_step_skipped`, `onboarding_finished`, `onboarding_agent_state`,
 `onboarding_sign_in`, and `new_thread_submit` (started, accepted, or failed),
-and release widget events: `release_widget_shown`, `release_widget_action`
-(`open_notes` or `dismiss`), and `release_notes_opened` (`entry_point`
-`widget` or `updates_link`).
+and the Settings → Updates release notes events: `release_notes_preview_shown`
+(with `update_available`) and `release_notes_opened` (`entry_point`
+`updates_link`).
 The route accepts only these events with fixed enums and booleans, plus a
 `release_version` of digits and dots (such as `0.47.0`): no provider ids,
 account details, prompts, release-note text, project or file names, terminal
@@ -736,16 +736,15 @@ ui_preference_conflict`. Read and write them with `bb settings ui
 list|get|set|reset` or `sdk.system.uiPreferences` (see
 `bb guide customization`).
 
-| Key                               | Value                                                                                                                                                  |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `sidebar.threadListProvider`      | Plugin key or `__automatic__` (default): the first installed thread list plugin other than the bundled `thread-list/thread-list`, else the bundled one |
-| `sidebar.navigationProvider`      | Plugin key or `__automatic__` (default): the first navigation from a plugin other than the bundled Navigation plugin, else its `navigation/rail`       |
-| `sidebar.pluginPanelOrder`        | Navigation destination order                                                                                                                           |
-| `sidebar.visiblePluginPanels`     | Navigation destinations shown, or `null` for every destination                                                                                         |
-| `sidebar.footerOrder`             | Footer action order                                                                                                                                    |
-| `sidebar.hiddenFooterItems`       | Footer actions moved into More                                                                                                                         |
-| `infoPanel.collapsedSections`     | Collapsed thread Info panel sections (`commits`, `uncommittedChanges`, `childThreads`, `forks`, `threadStorage`, or `<pluginId>/<sectionId>`)          |
-| `updates.dismissedReleaseVersion` | The bb release whose sidebar release widget was dismissed, or `null` (default)                                                                         |
+| Key                           | Value                                                                                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sidebar.threadListProvider`  | Plugin key or `__automatic__` (default): the first installed thread list plugin other than the bundled `thread-list/thread-list`, else the bundled one |
+| `sidebar.navigationProvider`  | Plugin key or `__automatic__` (default): the first navigation from a plugin other than the bundled Navigation plugin, else its `navigation/rail`       |
+| `sidebar.pluginPanelOrder`    | Navigation destination order                                                                                                                           |
+| `sidebar.visiblePluginPanels` | Navigation destinations shown, or `null` for every destination                                                                                         |
+| `sidebar.footerOrder`         | Footer action order                                                                                                                                    |
+| `sidebar.hiddenFooterItems`   | Footer actions moved into More                                                                                                                         |
+| `infoPanel.collapsedSections` | Collapsed thread Info panel sections (`commits`, `uncommittedChanges`, `childThreads`, `forks`, `threadStorage`, or `<pluginId>/<sectionId>`)          |
 
 A legacy `__builtin__` thread list selection resolves to the bundled plugin.
 Footer IDs are `builtin:settings` (top list layout only), `builtin:mobile`,
@@ -805,10 +804,9 @@ off. An experiment you set yourself keeps your value either way.
 `experiments`.
 
 - `changelogPreview` is retired. The key is still accepted but does nothing
-  and is not listed in Settings → Experiments: Settings → Updates always links
-  the release notes, and the sidebar shows each new release while an update is
-  available (dismissing it stores the release in the
-  `updates.dismissedReleaseVersion` UI preference).
+  and is not listed in Settings → Experiments: Settings → Updates always
+  previews the highlights of the release you can update to (or the installed
+  one) under the bb row and links its full release notes.
 - `compactExpiredCache` (on for early adopters) reports `compactionOfferAt` on a thread's context
   usage (timeline `contextWindowUsage` and `bb thread context`) once the
   provider has reported a prompt-cache lifetime, the provider supports manual

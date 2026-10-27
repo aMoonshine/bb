@@ -125,8 +125,9 @@ If any input is unclear, ask before bumping the version.
    `apps/web/public/changelog/<version>/` and references it as the first image
    in its `CHANGELOG.md` entry, as
    `![Alt text](https://getbb.app/changelog/<version>/<file>.jpg)`. It shows on
-   getbb.app/changelog and in the in-app release widget, which falls back to the
-   bb logo when an entry has no image.
+   getbb.app/changelog and in the release notes preview on Settings → Updates,
+   which shows the first four `### Highlights` items and leaves the image out
+   when an entry has none.
 
 5. Make any release documentation updates requested by the user.
 

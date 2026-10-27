@@ -45,6 +45,7 @@ import {
   UpdateActionButton,
   UpdatesSettingsSection,
 } from "./UpdatesSettingsSection";
+import { resetReleaseNotesPreviewSessionForTest } from "./ReleaseNotesPreview";
 
 vi.mock("@/components/onboarding/onboarding-telemetry", () => ({
   recordTelemetryEvent: vi.fn(),
@@ -372,6 +373,7 @@ afterEach(() => {
   window.localStorage.clear();
   resetAppUpdateCheckStoreForTests();
   resetProviderCliInstallStoreForTests();
+  resetReleaseNotesPreviewSessionForTest();
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
@@ -484,16 +486,97 @@ describe("UpdatesSettingsSection", () => {
       });
     }
 
+    function releaseNotesPreview(): HTMLElement | null {
+      return document.querySelector('[data-updates-domain="release-notes"]');
+    }
+
     it("links the target release's notes when an update is available", () => {
       renderSection();
 
-      expect(
-        document.querySelector('[data-updates-domain="changelog"]'),
-      ).toBeNull();
-      expect(fetch).not.toHaveBeenCalled();
       expect(releaseNotesLink("0.47.0").getAttribute("href")).toBe(
         "https://getbb.app/changelog#0-47-0",
       );
+    });
+
+    it("previews the target release's highlights under the bb row", () => {
+      renderSection();
+
+      const preview = releaseNotesPreview();
+      expect(preview).not.toBeNull();
+      expect(
+        within(preview!).getByRole("heading", { name: "What's in bb 0.47.0" }),
+      ).toBeDefined();
+      expect(
+        within(preview!).getByText("Customizable sidebar navigation"),
+      ).toBeDefined();
+      expect(within(preview!).getAllByRole("listitem")).toHaveLength(4);
+      expect(recordTelemetryEvent).toHaveBeenCalledExactlyOnceWith({
+        name: "release_notes_preview_shown",
+        properties: { release_version: "0.47.0", update_available: true },
+      });
+    });
+
+    it("previews the installed release when no update is available", () => {
+      useUpdateInventoryMock.mockReturnValue(
+        makeInventory({
+          systemVersion: {
+            currentVersion: "0.46.0",
+            latestVersion: "0.46.0",
+            currentCommit: null,
+            installKind: "npm",
+            source: "npm",
+            updateAvailable: false,
+            isDevelopment: false,
+            upgradeCommand: "npx bb-app@latest",
+          },
+        }),
+      );
+      renderSection();
+
+      const preview = releaseNotesPreview();
+      expect(
+        within(preview!).getByRole("heading", {
+          name: "What's new in bb 0.46.0",
+        }),
+      ).toBeDefined();
+      expect(
+        within(preview!)
+          .getByTestId("release-notes-preview-image")
+          .getAttribute("src"),
+      ).toBe("https://getbb.app/changelog/0.46.0/navigation-rail.jpg");
+      expect(recordTelemetryEvent).toHaveBeenCalledExactlyOnceWith({
+        name: "release_notes_preview_shown",
+        properties: { release_version: "0.46.0", update_available: false },
+      });
+    });
+
+    it("prefers the published changelog over the bundled one", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(`# Changelog
+
+## 0.47.0
+
+### Highlights
+
+- **Published highlight:** from the live changelog.
+`),
+        ),
+      );
+      renderSection();
+
+      expect(await screen.findByText("Published highlight")).toBeDefined();
+      expect(screen.getByText("from the live changelog.")).toBeDefined();
+      expect(screen.queryByText("Customizable sidebar navigation")).toBeNull();
+    });
+
+    it("shows no preview for a release missing from the changelog", () => {
+      useUpdateInventoryMock.mockReturnValue(makeInventory({}));
+      renderSection();
+
+      expect(releaseNotesPreview()).toBeNull();
+      expect(recordTelemetryEvent).not.toHaveBeenCalled();
     });
 
     it("links the installed release when no update is available", () => {
@@ -528,6 +611,7 @@ describe("UpdatesSettingsSection", () => {
     it("opens the release notes in the external browser", () => {
       renderSection();
 
+      vi.mocked(recordTelemetryEvent).mockClear();
       fireEvent.click(releaseNotesLink("0.47.0"));
 
       expect(openUrlInExternalBrowserMock).toHaveBeenCalledExactlyOnceWith(

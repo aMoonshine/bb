@@ -1,10 +1,10 @@
 import { recordTelemetryEvent } from "@/components/onboarding/onboarding-telemetry";
-import { isReleaseVersion } from "@/components/sidebar/release-widget-model";
+import { isReleaseVersion } from "./release-notes-model";
 import { openUrlInExternalBrowser } from "@/lib/url-open-routing";
 
 const RELEASE_NOTES_BASE_URL = "https://getbb.app/changelog";
 
-export type ReleaseNotesEntryPoint = "widget" | "updates_link";
+export type ReleaseNotesEntryPoint = "updates_link";
 
 export function getReleaseNotesUrl(version: string): string {
   return `${RELEASE_NOTES_BASE_URL}#${version.replaceAll(".", "-")}`;

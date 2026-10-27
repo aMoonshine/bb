@@ -189,9 +189,6 @@ function createUiPreferences(): UiPreferenceEntries {
     "infoPanel.collapsedSections": uiPreferenceEntry(
       "infoPanel.collapsedSections",
     ),
-    "updates.dismissedReleaseVersion": uiPreferenceEntry(
-      "updates.dismissedReleaseVersion",
-    ),
   };
 }
 

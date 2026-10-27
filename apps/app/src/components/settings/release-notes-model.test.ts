@@ -5,13 +5,13 @@ import type {
   SystemVersionResponse,
 } from "@bb/server-contract";
 import { parseChangelog } from "../../../../../changelog-parser";
-import { CHANGELOG_ENTRIES } from "@/components/settings/changelog-preview";
+import { CHANGELOG_ENTRIES } from "./changelog-preview";
 import {
   releaseHighlights,
   releaseImage,
-  resolveReleaseWidgetContent,
-  resolveReleaseWidgetTargetVersion,
-} from "./release-widget-model";
+  resolveReleasePreview,
+  resolveReleaseUpdateVersion,
+} from "./release-notes-model";
 
 function desktopInfo(overrides: Partial<BbDesktopInfo>): BbDesktopInfo {
   return {
@@ -71,10 +71,10 @@ const none = {
   systemVersion: undefined,
 };
 
-describe("resolveReleaseWidgetTargetVersion", () => {
+describe("resolveReleaseUpdateVersion", () => {
   it("uses the desktop's downloaded release first, then its latest", () => {
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         isDesktop: true,
         desktopInfo: desktopInfo({
@@ -85,7 +85,7 @@ describe("resolveReleaseWidgetTargetVersion", () => {
       }),
     ).toBe("0.47.0");
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         isDesktop: true,
         desktopInfo: desktopInfo({ latestVersion: "0.48.0" }),
@@ -95,7 +95,7 @@ describe("resolveReleaseWidgetTargetVersion", () => {
 
   it("waits for desktop info on desktop", () => {
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         isDesktop: true,
         appUpdate: appUpdate(available("0.47.0")),
@@ -105,7 +105,7 @@ describe("resolveReleaseWidgetTargetVersion", () => {
 
   it("uses the server's available release for npm and source installs", () => {
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         appUpdate: appUpdate(available("0.47.0")),
         systemVersion: systemVersion({
@@ -115,7 +115,7 @@ describe("resolveReleaseWidgetTargetVersion", () => {
       }),
     ).toBe("0.47.0");
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         appUpdate: appUpdate(available("0.47.0", "main")),
       }),
@@ -124,7 +124,7 @@ describe("resolveReleaseWidgetTargetVersion", () => {
 
   it("falls back to npm's latest release when the update status has none", () => {
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         appUpdate: appUpdate(null),
         systemVersion: systemVersion({
@@ -134,7 +134,7 @@ describe("resolveReleaseWidgetTargetVersion", () => {
       }),
     ).toBe("0.47.0");
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         systemVersion: systemVersion({ latestVersion: "0.47.0" }),
       }),
@@ -143,19 +143,19 @@ describe("resolveReleaseWidgetTargetVersion", () => {
 
   it("skips nightly and other non-release versions", () => {
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         appUpdate: appUpdate(available("0.48.0-nightly.20261024", "nightly")),
       }),
     ).toBeNull();
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         appUpdate: appUpdate(available("0.48.0", "nightly")),
       }),
     ).toBeNull();
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         isDesktop: true,
         desktopInfo: desktopInfo({ latestVersion: "0.48.0-nightly.3" }),
@@ -165,19 +165,19 @@ describe("resolveReleaseWidgetTargetVersion", () => {
 
   it("never targets the installed version or an older one", () => {
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         appUpdate: appUpdate(available("0.46.1"), "0.46.1"),
       }),
     ).toBeNull();
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         appUpdate: appUpdate(available("0.46.0"), "0.46.1"),
       }),
     ).toBeNull();
     expect(
-      resolveReleaseWidgetTargetVersion({
+      resolveReleaseUpdateVersion({
         ...none,
         isDesktop: true,
         desktopInfo: desktopInfo({ latestVersion: "0.46.1" }),
@@ -198,7 +198,8 @@ A lede.
 - **Second.** with a period.
 - **Third** without punctuation.
 - A plain line without a bold title.
-- **Fourth:** dropped, only three show.
+- **Fourth:** shown.
+- **Fifth:** dropped, only four show.
 
 ### Fixes
 
@@ -211,13 +212,16 @@ A lede.
 - Fixed something.
 `);
 
+const SAMPLE_HIGHLIGHTS = [
+  { title: "First highlight", description: "with a description." },
+  { title: "Second", description: "with a period." },
+  { title: "Third", description: "without punctuation." },
+  { title: "Fourth", description: "shown." },
+];
+
 describe("releaseHighlights", () => {
-  it("returns up to three bold titles without their trailing punctuation", () => {
-    expect(releaseHighlights(SAMPLE[0]!)).toEqual([
-      "First highlight",
-      "Second",
-      "Third",
-    ]);
+  it("returns up to four bold titles and the text after them", () => {
+    expect(releaseHighlights(SAMPLE[0]!)).toEqual(SAMPLE_HIGHLIGHTS);
   });
 
   it("returns nothing when a release has no Highlights section", () => {
@@ -229,9 +233,10 @@ describe("releaseHighlights", () => {
     expect(latest).toBeDefined();
     const highlights = releaseHighlights(latest!);
     expect(highlights.length).toBeGreaterThan(0);
-    expect(highlights.length).toBeLessThanOrEqual(3);
+    expect(highlights.length).toBeLessThanOrEqual(4);
     for (const highlight of highlights) {
-      expect(highlight).not.toMatch(/[*:]/);
+      expect(highlight.title).not.toMatch(/[*:]/);
+      expect(highlight.description).not.toMatch(/^[\s:]/);
     }
   });
 });
@@ -308,7 +313,7 @@ describe("releaseImage", () => {
   });
 });
 
-describe("resolveReleaseWidgetContent", () => {
+describe("resolveReleasePreview", () => {
   it("prefers the fetched changelog and falls back to the bundled one", () => {
     const bundled = parseChangelog(`## 0.48.0
 
@@ -320,12 +325,12 @@ Bundled lede.
 
 ![Bundled](https://getbb.app/changelog/0.48.0/bundled.jpg)
 `);
-    expect(resolveReleaseWidgetContent("0.48.0", SAMPLE, bundled)).toEqual({
-      highlights: ["First highlight", "Second", "Third"],
+    expect(resolveReleasePreview("0.48.0", SAMPLE, bundled)).toEqual({
+      highlights: SAMPLE_HIGHLIGHTS,
       image: null,
     });
-    expect(resolveReleaseWidgetContent("0.48.0", undefined, bundled)).toEqual({
-      highlights: ["Bundled"],
+    expect(resolveReleasePreview("0.48.0", undefined, bundled)).toEqual({
+      highlights: [{ title: "Bundled", description: "older copy." }],
       image: {
         src: "https://getbb.app/changelog/0.48.0/bundled.jpg",
         alt: "Bundled",
@@ -334,7 +339,7 @@ Bundled lede.
   });
 
   it("is null when the release is missing or has no highlights", () => {
-    expect(resolveReleaseWidgetContent("0.49.0", SAMPLE, [])).toBeNull();
-    expect(resolveReleaseWidgetContent("0.47.1", SAMPLE, [])).toBeNull();
+    expect(resolveReleasePreview("0.49.0", SAMPLE, [])).toBeNull();
+    expect(resolveReleasePreview("0.47.1", SAMPLE, [])).toBeNull();
   });
 });

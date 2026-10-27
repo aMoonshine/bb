@@ -253,8 +253,7 @@ Sidebar preferences
 
 `bb settings ui` reads and writes server-side sidebar preferences shared by
 every window, device, and the CLI. The same registry stores which thread Info
-panel sections are collapsed (`infoPanel.collapsedSections`) and which release's
-sidebar release widget was dismissed (`updates.dismissedReleaseVersion`).
+panel sections are collapsed (`infoPanel.collapsedSections`).
 
 bb settings ui list [--json]
 bb settings ui get <key> [--json]

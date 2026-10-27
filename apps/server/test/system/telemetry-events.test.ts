@@ -56,26 +56,18 @@ describe("client telemetry events", () => {
     });
   });
 
-  it("forwards accepted release widget events to telemetry unchanged", async () => {
+  it("forwards accepted release notes events to telemetry unchanged", async () => {
     await withTestHarness(async (harness) => {
       const capture = vi.fn<TelemetryService["capture"]>();
       harness.deps.telemetry = { ...harness.deps.telemetry, capture };
       const events = [
         {
-          name: "release_widget_shown",
-          properties: { release_version: "0.47.0" },
+          name: "release_notes_preview_shown",
+          properties: { release_version: "0.47.0", update_available: true },
         },
         {
-          name: "release_widget_action",
-          properties: { release_version: "0.47.0", action: "open_notes" },
-        },
-        {
-          name: "release_widget_action",
-          properties: { release_version: "1.2", action: "dismiss" },
-        },
-        {
-          name: "release_notes_opened",
-          properties: { release_version: "0.47.0", entry_point: "widget" },
+          name: "release_notes_preview_shown",
+          properties: { release_version: "1.2", update_available: false },
         },
         {
           name: "release_notes_opened",
@@ -95,76 +87,40 @@ describe("client telemetry events", () => {
     });
   });
 
-  it("rejects release widget events with free-text versions or extra properties", async () => {
+  it("rejects release notes events with free-text versions or extra properties", async () => {
     await withTestHarness(async (harness) => {
       const capture = vi.fn<TelemetryService["capture"]>();
       harness.deps.telemetry = { ...harness.deps.telemetry, capture };
+      const shown = (properties: Record<string, unknown>) => ({
+        name: "release_notes_preview_shown",
+        properties: { update_available: true, ...properties },
+      });
       for (const event of [
+        shown({ release_version: "0.47.0; drop" }),
+        shown({ release_version: "v0.47.0" }),
+        shown({ release_version: "0.47.0-beta.1" }),
+        shown({ release_version: `0.${"1".repeat(40)}` }),
+        shown({ release_version: "0.47.0", threadId: "thr_123" }),
+        shown({ release_version: "0.47.0", update_available: "yes" }),
         {
-          name: "release_widget_shown",
-          properties: { release_version: "0.47.0; drop" },
-        },
-        {
-          name: "release_widget_shown",
-          properties: { release_version: "v0.47.0" },
-        },
-        {
-          name: "release_widget_shown",
-          properties: { release_version: "0.47.0-beta.1" },
-        },
-        {
-          name: "release_widget_shown",
-          properties: { release_version: `0.${"1".repeat(40)}` },
-        },
-        {
-          name: "release_widget_shown",
-          properties: { release_version: "0.47.0", threadId: "thr_123" },
-        },
-        {
-          name: "release_widget_action",
-          properties: { release_version: "0.47.0", action: "open" },
-        },
-        {
-          name: "release_widget_action",
-          properties: { release_version: "0.47.0", action: "snooze" },
-        },
-        {
-          name: "release_widget_action",
-          properties: {
-            release_version: "0.47.0",
-            action: "open_notes",
-            notes: "Release highlights text",
-          },
+          name: "release_notes_preview_shown",
+          properties: { release_version: "0.47.0" },
         },
         {
           name: "release_notes_opened",
-          properties: {
-            release_version: "0.47.0",
-            entry_point: "settings_search",
-          },
-        },
-        {
-          name: "release_notes_opened",
-          properties: {
-            release_version: "0.47.0",
-            entry_point: "sidebar",
-          },
+          properties: { release_version: "0.47.0", entry_point: "widget" },
         },
         {
           name: "release_notes_opened",
           properties: {
             release_version: "0.47.0",
             entry_point: "updates_link",
-            destination: "external_browser",
+            url: "https://example.com/notes",
           },
         },
         {
-          name: "release_notes_opened",
-          properties: {
-            release_version: "0.47.0",
-            entry_point: "widget",
-            url: "https://example.com/notes",
-          },
+          name: "release_widget_shown",
+          properties: { release_version: "0.47.0" },
         },
       ]) {
         expect((await post(harness, event)).status).toBe(400);

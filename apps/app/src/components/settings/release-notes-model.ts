@@ -8,7 +8,7 @@ import type {
   ChangelogEntry,
 } from "../../../../../changelog-parser";
 
-export const RELEASE_WIDGET_MAX_HIGHLIGHTS = 3;
+export const RELEASE_PREVIEW_MAX_HIGHLIGHTS = 4;
 
 const RELEASE_VERSION_PATTERN = /^\d+(?:\.\d+){1,3}$/;
 const BOLD_TITLE_PATTERN = /^\*\*(.+?)\*\*/;
@@ -30,19 +30,19 @@ function compareReleaseVersions(left: string, right: string): number {
   return 0;
 }
 
-export interface ReleaseWidgetTargetInput {
+export interface ReleaseVersionInput {
   isDesktop: boolean;
   desktopInfo: BbDesktopInfo | null;
   appUpdate: SystemAppUpdateStatus | undefined;
   systemVersion: SystemVersionResponse | undefined;
 }
 
-export function resolveReleaseWidgetTargetVersion({
+export function resolveReleaseUpdateVersion({
   isDesktop,
   desktopInfo,
   appUpdate,
   systemVersion,
-}: ReleaseWidgetTargetInput): string | null {
+}: ReleaseVersionInput): string | null {
   let candidate: string | null;
   let installed: string | null;
   if (isDesktop) {
@@ -81,49 +81,62 @@ export function resolveReleaseWidgetTargetVersion({
   return candidate;
 }
 
-function highlightTitle(item: string): string | null {
-  const match = BOLD_TITLE_PATTERN.exec(item.trim());
+export interface ReleaseHighlight {
+  title: string;
+  description: string;
+}
+
+function highlightFromItem(item: string): ReleaseHighlight | null {
+  const trimmed = item.trim();
+  const match = BOLD_TITLE_PATTERN.exec(trimmed);
   const title = match?.[1]
     ?.trim()
     .replace(/[:.]+$/, "")
     .trim();
-  return title === undefined || title === "" ? null : title;
+  if (match === null || title === undefined || title === "") {
+    return null;
+  }
+  const description = trimmed
+    .slice(match[0].length)
+    .replace(/^[:.]/, "")
+    .trim();
+  return { title, description };
 }
 
-export function releaseHighlights(entry: ChangelogEntry): string[] {
+export function releaseHighlights(entry: ChangelogEntry): ReleaseHighlight[] {
   const section = entry.sections.find(
     (candidate) => candidate.title.trim().toLowerCase() === "highlights",
   );
   if (section === undefined) {
     return [];
   }
-  const titles: string[] = [];
+  const highlights: ReleaseHighlight[] = [];
   for (const block of section.blocks) {
     if (block.kind !== "list") {
       continue;
     }
     for (const item of block.items) {
-      const title = highlightTitle(item);
-      if (title !== null) {
-        titles.push(title);
+      const highlight = highlightFromItem(item);
+      if (highlight !== null) {
+        highlights.push(highlight);
       }
     }
   }
-  return titles.slice(0, RELEASE_WIDGET_MAX_HIGHLIGHTS);
+  return highlights.slice(0, RELEASE_PREVIEW_MAX_HIGHLIGHTS);
 }
 
 const MARKDOWN_IMAGE_PATTERN = /^!\[([^\]]*)\]\(([^)\s]+)\)$/;
 const RELEASE_IMAGE_ORIGIN = "https://getbb.app";
 const RELEASE_IMAGE_PATH_PREFIX = "/changelog/";
 
-export interface ReleaseWidgetImage {
+export interface ReleaseImage {
   src: string;
   alt: string;
 }
 
-export interface ReleaseWidgetContent {
-  highlights: string[];
-  image: ReleaseWidgetImage | null;
+export interface ReleasePreview {
+  highlights: ReleaseHighlight[];
+  image: ReleaseImage | null;
 }
 
 function entryBlocks(entry: ChangelogEntry): ChangelogBlock[] {
@@ -165,7 +178,7 @@ function trustedReleaseImageUrl(url: string): string | null {
   return parsed.href;
 }
 
-export function releaseImage(entry: ChangelogEntry): ReleaseWidgetImage | null {
+export function releaseImage(entry: ChangelogEntry): ReleaseImage | null {
   for (const block of entryBlocks(entry)) {
     const image = markdownImage(block);
     if (image === null) {
@@ -183,11 +196,11 @@ export function releaseImage(entry: ChangelogEntry): ReleaseWidgetImage | null {
   return null;
 }
 
-export function resolveReleaseWidgetContent(
+export function resolveReleasePreview(
   version: string,
   fetchedEntries: readonly ChangelogEntry[] | undefined,
   bundledEntries: readonly ChangelogEntry[],
-): ReleaseWidgetContent | null {
+): ReleasePreview | null {
   const entry =
     fetchedEntries?.find((candidate) => candidate.version === version) ??
     bundledEntries.find((candidate) => candidate.version === version);

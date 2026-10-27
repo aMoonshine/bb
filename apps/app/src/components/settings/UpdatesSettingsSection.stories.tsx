@@ -14,6 +14,7 @@ import {
 import { StoryCard, StoryRow } from "../../../.ladle/story-card";
 import { openUrlInExternalBrowser } from "@/lib/url-open-routing";
 import { getReleaseNotesUrl } from "./release-notes";
+import { ReleaseNotesPreview } from "./ReleaseNotesPreview";
 import {
   BbAppUpdateRows,
   BbUpdatesCard,
@@ -357,22 +358,23 @@ export function RowVariations() {
 
         <StoryRow
           label="Update available"
-          hint="A web install cannot replace itself, so its action copies the upgrade command. Release notes opens the new version's notes."
+          hint="A web install cannot replace itself, so its action copies the upgrade command. Release notes opens the new version's notes, and the new version's highlights preview below the row."
         >
           <div className="w-full">
             <BbUpdatesCard>
               <BbAppUpdateRows
                 systemVersion={{
                   ...NPM_VERSION,
-                  latestVersion: "0.39.0",
+                  latestVersion: "0.47.0",
                   updateAvailable: true,
                 }}
                 desktopInfo={null}
                 isDesktop={false}
                 onRelaunchDesktop={null}
                 onRetryDesktop={null}
-                releaseNotes={storyReleaseNotes("0.39.0")}
+                releaseNotes={storyReleaseNotes("0.47.0")}
               />
+              <ReleaseNotesPreview version="0.47.0" updateAvailable />
             </BbUpdatesCard>
           </div>
         </StoryRow>
