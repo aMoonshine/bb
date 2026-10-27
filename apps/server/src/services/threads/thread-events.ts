@@ -1,6 +1,7 @@
 import {
   appendStoredThreadEventsInTransaction,
   createEventId,
+  events,
   getActiveStoredTurnId,
   isStoredTurnMainRunIdle,
   getLastStoredProviderThreadId,
@@ -25,6 +26,7 @@ import {
   turnRequestEventDataSchema,
   WORKSPACE_PROVISIONING_STEP_KEYS,
 } from "@bb/domain";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import type {
   ClientTurnRequestId,
@@ -871,12 +873,33 @@ export function isManualCompactionActive(
   }
 
   const activeTurnId = getActiveStoredTurnId(deps.db, thread.id);
-  const requestRow = activeTurnId
-    ? (getStoredTurnRequestEventForTurn(deps.db, {
+  const turnRequestRow = activeTurnId
+    ? getStoredTurnRequestEventForTurn(deps.db, {
         threadId: thread.id,
         turnId: activeTurnId,
-      }) ?? getLastStoredTurnRequestEvent(deps.db, thread.id))
-    : getLastStoredTurnRequestEvent(deps.db, thread.id);
+      })
+    : null;
+  if (activeTurnId !== null && turnRequestRow === null) {
+    const compaction = deps.db
+      .select({ type: events.type })
+      .from(events)
+      .where(
+        and(
+          eq(events.threadId, thread.id),
+          eq(events.turnId, activeTurnId),
+          eq(events.itemKind, "contextCompaction"),
+          isNull(events.parentToolCallId),
+        ),
+      )
+      .orderBy(desc(events.sequence))
+      .limit(1)
+      .get();
+    if (compaction?.type === "item/started") {
+      return true;
+    }
+  }
+  const requestRow =
+    turnRequestRow ?? getLastStoredTurnRequestEvent(deps.db, thread.id);
   if (!requestRow) {
     return false;
   }
