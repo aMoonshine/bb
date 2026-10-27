@@ -449,6 +449,7 @@ interface BbAppUpdateRowsProps {
   onShowAppUpdateResult?: ((result: SystemAppUpdateResult) => void) | null;
   isChecking?: boolean;
   releaseNotes?: ReleaseNotesLink | null;
+  summary?: ReactNode;
 }
 
 export interface ReleaseNotesLink {
@@ -488,6 +489,7 @@ export function BbAppUpdateRows({
   onShowAppUpdateResult = null,
   isChecking = false,
   releaseNotes = null,
+  summary = null,
 }: BbAppUpdateRowsProps) {
   const notesLink =
     releaseNotes === null ? null : <ReleaseNotesLinkButton {...releaseNotes} />;
@@ -525,6 +527,7 @@ export function BbAppUpdateRows({
             {description}
           </span>
         )}
+        {summary}
       </span>
     </UpdatesRow>
   );
@@ -1903,6 +1906,7 @@ export function UpdatesSettingsSection() {
       onRelaunchDesktop={useServerUpdate ? null : relaunchDesktop}
       onRetryDesktop={useServerUpdate ? null : retryDesktop}
       releaseNotes={releaseNotes}
+      summary={<ReleaseNotesPreview {...releaseNotesVersion} />}
     />
   );
   const desktopClientRow = (
@@ -1946,7 +1950,6 @@ export function UpdatesSettingsSection() {
         {serverRunsSeparately && desktopRowNeedsAttention(desktopInfo)
           ? desktopClientRow
           : null}
-        <ReleaseNotesPreview {...releaseNotesVersion} />
       </BbUpdatesCard>
 
       <ProviderCliUpdatesSection

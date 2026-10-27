@@ -373,8 +373,10 @@ export function RowVariations() {
                 onRelaunchDesktop={null}
                 onRetryDesktop={null}
                 releaseNotes={storyReleaseNotes("0.47.0")}
+                summary={
+                  <ReleaseNotesPreview version="0.47.0" updateAvailable />
+                }
               />
-              <ReleaseNotesPreview version="0.47.0" updateAvailable />
             </BbUpdatesCard>
           </div>
         </StoryRow>
