@@ -240,7 +240,8 @@
         "GITHUB_ACTIONS",
         "GITHUB_SHA",
         "GITHUB_STEP_SUMMARY",
-        "CODEX_INSTALL_RESULTS"
+        "CODEX_INSTALL_RESULTS",
+        "OS"
       ]
     },
     "bb-app#build:host": {

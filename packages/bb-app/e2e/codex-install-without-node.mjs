@@ -158,6 +158,11 @@ try {
     CI: "true",
     BB_TELEMETRY: "false",
   });
+  assert.equal(
+    env.OS,
+    "Windows_NT",
+    "Preserve the Windows OS environment through Turbo",
+  );
   await mkdir(env.APPDATA, { recursive: true });
   await mkdir(env.LOCALAPPDATA, { recursive: true });
   savedPaths = JSON.parse(
