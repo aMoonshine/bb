@@ -320,7 +320,18 @@ export function formPage({
             ) : (
               <>
                 <div className="community-intro">
-                  <h1>{title}</h1>
+                  {kind === "survey" ? (
+                    <h1 aria-label={title}>
+                      Help shape the future of{" "}
+                      <span
+                        className="bb-mark community-heading-mark"
+                        aria-hidden
+                      />
+                      !
+                    </h1>
+                  ) : (
+                    <h1>{title}</h1>
+                  )}
                   <p>
                     {kind === "survey"
                       ? SURVEY_DESCRIPTION

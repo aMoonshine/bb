@@ -39,6 +39,15 @@
   margin: 0 0 24px;
   color: var(--heading);
 }
+/* Inline wordmark sized to the heading, matching the marketplace hero. */
+.community-heading-mark {
+  display: inline-block;
+  width: 0.95em;
+  height: 0.8em;
+  background-size: 177.78% 210.99%;
+  background-position: 50% 50.5%;
+  vertical-align: -0.025em;
+}
 .community-intro > p:not(.community-eyebrow):not(.community-help),
 .community-thanks > p:not(.community-eyebrow) {
   font-size: 1.0625rem;
