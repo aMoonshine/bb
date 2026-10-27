@@ -107,21 +107,24 @@ export function ReleaseNotesPreviewContent({
     <section
       aria-labelledby={headingId}
       data-updates-domain="release-notes"
-      className="flex min-w-0 flex-col gap-3 px-4 py-3.5"
+      className="flex min-w-0 flex-col gap-2 px-4 py-3"
     >
       <h3 id={headingId} className="text-xs font-medium text-muted-foreground">
         {updateAvailable
           ? `What's in bb ${version}`
           : `What's new in bb ${version}`}
       </h3>
-      <ul className="flex min-w-0 flex-col gap-2.5">
+      <ul className="flex min-w-0 flex-col gap-1">
         {preview.highlights.map((highlight) => (
-          <li key={highlight.title} className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-sm font-medium text-foreground">
+          <li
+            key={highlight.title}
+            className="flex min-w-0 items-baseline gap-2 text-sm"
+          >
+            <span className="max-w-full shrink-0 truncate font-medium text-foreground">
               {highlight.title}
             </span>
             {highlight.description === "" ? null : (
-              <span className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+              <span className="min-w-0 truncate text-xs text-muted-foreground">
                 <ReactMarkdown components={DESCRIPTION_COMPONENTS} skipHtml>
                   {highlight.description}
                 </ReactMarkdown>
