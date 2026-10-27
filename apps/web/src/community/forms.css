@@ -48,6 +48,9 @@
   background-position: 50% 50.5%;
   vertical-align: -0.025em;
 }
+.community-nowrap {
+  white-space: nowrap;
+}
 .community-intro > p:not(.community-eyebrow):not(.community-help),
 .community-thanks > p:not(.community-eyebrow) {
   font-size: 1.0625rem;

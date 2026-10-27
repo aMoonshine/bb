@@ -323,11 +323,13 @@ export function formPage({
                   {kind === "survey" ? (
                     <h1 aria-label={title}>
                       Help shape the future of{" "}
-                      <span
-                        className="bb-mark community-heading-mark"
-                        aria-hidden
-                      />
-                      !
+                      <span className="community-nowrap">
+                        <span
+                          className="bb-mark community-heading-mark"
+                          aria-hidden
+                        />
+                        !
+                      </span>
                     </h1>
                   ) : (
                     <h1>{title}</h1>
