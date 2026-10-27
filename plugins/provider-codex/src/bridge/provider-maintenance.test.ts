@@ -409,7 +409,7 @@ describe("Codex native install", () => {
     expect(status.installAction?.command).not.toContain("npm");
   });
 
-  it("finds a native install that is not on PATH yet", async () => {
+  it("keeps native sign-in commands usable before and after bb refreshes PATH", async () => {
     const binDir =
       process.platform === "win32"
         ? path.join(root, "AppData", "Local", "Programs", "OpenAI", "Codex")
@@ -431,6 +431,12 @@ describe("Codex native install", () => {
         nativeBin,
         process.platform === "win32" ? "codex.exe" : "codex",
       ),
+    );
+    vi.stubEnv("PATH", nativeBin);
+    expect(resolveCodexCommand().toLowerCase()).toBe(
+      path
+        .join(nativeBin, process.platform === "win32" ? "codex.exe" : "codex")
+        .toLowerCase(),
     );
     if (process.platform !== "win32") {
       const status = await getCodexProviderInstallationStatus(undefined, false);

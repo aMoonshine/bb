@@ -28,30 +28,33 @@ export function codexNativeExecutablePath(
   return path.posix.join(env.HOME ?? os.homedir(), ".local", "bin", "codex");
 }
 
-function commandOnPath(
+function executableOnPath(
   command: string,
   env: NodeJS.ProcessEnv,
   platform: NodeJS.Platform,
-): boolean {
+): string | null {
   const extensions =
     platform === "win32"
       ? (env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean)
       : [""];
-  return (env.PATH ?? "")
+  const paths = platform === "win32" ? path.win32 : path.posix;
+  for (const directory of (env.PATH ?? "")
     .split(platform === "win32" ? ";" : ":")
-    .filter(Boolean)
-    .some((directory) =>
-      extensions.some((extension) =>
-        existsSync(path.join(directory, `${command}${extension}`)),
-      ),
-    );
+    .filter(Boolean)) {
+    for (const extension of extensions) {
+      const executable = paths.resolve(directory, `${command}${extension}`);
+      if (existsSync(executable)) return executable;
+    }
+  }
+  return null;
 }
 
 export function resolveCodexCommand(
   env: NodeJS.ProcessEnv = process.env,
   platform: NodeJS.Platform = process.platform,
 ): string {
-  if (commandOnPath("codex", env, platform)) return "codex";
+  const onPath = executableOnPath("codex", env, platform);
+  if (onPath !== null) return onPath;
   const nativePath = codexNativeExecutablePath(env, platform);
   return existsSync(nativePath) ? nativePath : "codex";
 }
