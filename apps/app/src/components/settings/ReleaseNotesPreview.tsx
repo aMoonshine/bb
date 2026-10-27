@@ -103,18 +103,17 @@ export function ReleaseNotesPreviewContent({
   updateAvailable: boolean;
 }) {
   return (
-    <p
-      data-updates-domain="release-notes"
-      className="line-clamp-2 px-4 py-2.5 pl-13 text-xs leading-snug text-muted-foreground"
-    >
-      <span className="font-medium text-foreground">
-        {updateAvailable
-          ? `What's in bb ${version}: `
-          : `What's new in bb ${version}: `}
-      </span>
-      <ReactMarkdown components={SUMMARY_COMPONENTS} skipHtml>
-        {preview.summary}
-      </ReactMarkdown>
-    </p>
+    <div data-updates-domain="release-notes" className="px-4 py-2.5 pl-13">
+      <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+        <span className="font-medium text-foreground">
+          {updateAvailable
+            ? `What's in bb ${version}: `
+            : `What's new in bb ${version}: `}
+        </span>
+        <ReactMarkdown components={SUMMARY_COMPONENTS} skipHtml>
+          {preview.summary}
+        </ReactMarkdown>
+      </p>
+    </div>
   );
 }
