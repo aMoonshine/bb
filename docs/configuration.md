@@ -805,8 +805,8 @@ off. An experiment you set yourself keeps your value either way.
 
 - `changelogPreview` is retired. The key is still accepted but does nothing
   and is not listed in Settings → Experiments: Settings → Updates always
-  previews the highlights of the release you can update to (or the installed
-  one) under the bb row and links its full release notes.
+  shows the one-sentence summary of the release you can update to (or the
+  installed one) under the bb row and links its full release notes.
 - `compactExpiredCache` (on for early adopters) reports `compactionOfferAt` on a thread's context
   usage (timeline `contextWindowUsage` and `bb thread context`) once the
   provider has reported a prompt-cache lifetime, the provider supports manual
