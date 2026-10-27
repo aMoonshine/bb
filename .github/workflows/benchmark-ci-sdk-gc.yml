@@ -1,7 +1,7 @@
-name: Compare SDK declaration GC settings
+name: Compare Windows SDK heap limits
 on:
   push:
-    branches: [bb/benchmark-ci-sdk-gc]
+    branches: [bb/benchmark-ci-sdk-heap]
 permissions:
   contents: read
 jobs:
@@ -12,10 +12,8 @@ jobs:
       fail-fast: false
       matrix:
         order: [default-first, large-first]
-        group: [linux, windows]
+        group: [windows]
         include:
-          - group: linux
-            runner: blacksmith-4vcpu-ubuntu-2404
           - group: windows
             runner: blacksmith-4vcpu-windows-2025
     steps:
@@ -41,5 +39,5 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
-          name: sdk-gc-${{ matrix.group }}-${{ matrix.order }}
+          name: sdk-heap-${{ matrix.group }}-${{ matrix.order }}
           path: ${{ runner.temp }}/sdk-gc-results/

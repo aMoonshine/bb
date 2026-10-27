@@ -11,13 +11,13 @@ const hashes = () => Object.fromEntries(readdirSync(declarationDir).filter((name
 const expected = hashes();
 writeFileSync(join(output, "expected-hashes.json"), JSON.stringify(expected, null, 2));
 const sequence = process.env.BENCHMARK_ORDER === "default-first"
-  ? ["default", "64", "128", "128", "64", "default"]
-  : ["128", "64", "default", "default", "64", "128"];
+  ? ["default", "128", "heap4096", "heap4096", "128", "default"]
+  : ["heap4096", "128", "default", "default", "128", "heap4096"];
 const results = [];
 for (const [index, setting] of sequence.entries()) {
   const metrics = join(output, `${index}-${setting}.json`);
   const fd = openSync(join(output, `${index}-${setting}.log`), "w");
-  const args = [...(setting === "default" ? [] : [`--max-semi-space-size=${setting}`]), resolve(".github/scripts/benchmark-sdk-gc-worker.mjs")];
+  const args = [...(setting === "default" ? [] : setting === "heap4096" ? ["--max-semi-space-size=128", "--max-old-space-size=4096"] : ["--max-semi-space-size=128"]), resolve(".github/scripts/benchmark-sdk-gc-worker.mjs")];
   const started = performance.now();
   const result = spawnSync(process.execPath, args, {
     cwd: join(root, "packages/plugin-sdk"),
