@@ -213,6 +213,14 @@ afterEach(() => {
   testState.recorderButtonCalls.clear();
 });
 
+function withinShortcutGroup(name: string) {
+  const section = screen
+    .getByRole("heading", { name, level: 3 })
+    .closest("section");
+  if (!section) throw new Error(`Missing shortcut section: ${name}`);
+  return within(section);
+}
+
 describe("KeyboardSettingsSection", () => {
   it.each(["Reset shortcut for Open first plugin", "Reset all"])(
     "%s removes an explicit plugin default and restores conflict suppression",
@@ -253,7 +261,7 @@ describe("KeyboardSettingsSection", () => {
       });
       const { rerender } = render(<KeyboardSettingsSection />);
       expect(
-        screen.getByRole("button", {
+        withinShortcutGroup("Plugin commands").getByRole("button", {
           name: "Record shortcut for Open first plugin, current shortcut Ctrl + Shift + I",
         }),
       ).toBeTruthy();
@@ -264,7 +272,7 @@ describe("KeyboardSettingsSection", () => {
       rerender(<KeyboardSettingsSection />);
       for (const id of ["first", "second"]) {
         expect(
-          screen.getByRole("button", {
+          withinShortcutGroup("Plugin commands").getByRole("button", {
             name: `Record shortcut for Open ${id} plugin, current shortcut unassigned`,
           }),
         ).toBeTruthy();
@@ -298,32 +306,34 @@ describe("KeyboardSettingsSection", () => {
     });
     const { rerender } = render(<KeyboardSettingsSection />);
     fireEvent.click(
-      screen.getByRole("button", { name: "Reset shortcut for New thread" }),
+      withinShortcutGroup("Threads").getByRole("button", {
+        name: "Reset shortcut for New thread",
+      }),
     );
     rerender(<KeyboardSettingsSection />);
     expect(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Record shortcut for New thread, current shortcut ⇧ ⌘ O",
       }),
     ).toBeTruthy();
     testState.isDesktop = true;
     rerender(<KeyboardSettingsSection />);
     expect(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Record shortcut for New thread, current shortcut ⌘ N",
       }),
     ).toBeTruthy();
     platform.mockReturnValue("Linux");
     rerender(<KeyboardSettingsSection />);
     expect(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Record shortcut for New thread, current shortcut Ctrl + G",
       }),
     ).toBeTruthy();
     platform.mockReturnValue("Win32");
     rerender(<KeyboardSettingsSection />);
     expect(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Record shortcut for New thread, current shortcut unassigned",
       }),
     ).toBeTruthy();
@@ -355,7 +365,7 @@ describe("KeyboardSettingsSection", () => {
     const sharedRename = { ...general, command: "thread.rename" } as const;
     testState.keybindingOverrides = [sharedRename, general, mac, otherWindows];
     render(<KeyboardSettingsSection />);
-    const recorder = screen.getByRole("button", {
+    const recorder = withinShortcutGroup("Threads").getByRole("button", {
       name: "Record shortcut for New thread, current shortcut Ctrl + G",
     });
     fireEvent.click(recorder);
@@ -372,7 +382,9 @@ describe("KeyboardSettingsSection", () => {
       },
     ]);
     fireEvent.click(
-      screen.getByRole("button", { name: "Clear shortcut for New thread" }),
+      withinShortcutGroup("Threads").getByRole("button", {
+        name: "Clear shortcut for New thread",
+      }),
     );
     expect(testState.mutate.mock.lastCall?.[0]).toEqual([
       sharedRename,
@@ -382,7 +394,9 @@ describe("KeyboardSettingsSection", () => {
       { command: "thread.new", platform: "windows", shortcut: null },
     ]);
     fireEvent.click(
-      screen.getByRole("button", { name: "Reset shortcut for New thread" }),
+      withinShortcutGroup("Threads").getByRole("button", {
+        name: "Reset shortcut for New thread",
+      }),
     );
     expect(testState.mutate.mock.lastCall?.[0]).toEqual([
       sharedRename,
@@ -391,12 +405,12 @@ describe("KeyboardSettingsSection", () => {
       { ...general, platform: "linux" },
     ]);
     expect(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Record shortcut for New thread, current shortcut Ctrl + Shift + O",
       }),
     ).toBeTruthy();
     expect(
-      screen
+      withinShortcutGroup("Threads")
         .getByRole("button", { name: "Reset shortcut for New thread" })
         .hasAttribute("disabled"),
     ).toBe(true);
@@ -408,7 +422,7 @@ describe("KeyboardSettingsSection", () => {
       { ...sharedRename, platform: "linux" },
     ]);
     expect(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Record shortcut for Rename thread, current shortcut unassigned",
       }),
     ).toBeTruthy();
@@ -552,6 +566,7 @@ describe("KeyboardSettingsSection", () => {
     const originalLabels = screen
       .getAllByRole("button", { name: /^Record shortcut for / })
       .map((recorder) => recorder.getAttribute("aria-label"));
+    expect(new Set(originalLabels).size).toBe(originalLabels.length);
     const originalHeadings = screen
       .getAllByRole("heading", { level: 3 })
       .map((heading) => heading.textContent);
@@ -589,9 +604,12 @@ describe("KeyboardSettingsSection", () => {
       }),
     );
     render(<KeyboardSettingsSection />);
-    const recorder = screen.getByRole("button", {
-      name: "Record shortcut for Open plugin issue, current shortcut unassigned",
-    });
+    const recorder = withinShortcutGroup("Plugin commands").getByRole(
+      "button",
+      {
+        name: "Record shortcut for Open plugin issue, current shortcut unassigned",
+      },
+    );
     fireEvent.click(recorder);
     fireEvent.keyDown(recorder, { key: "i", ctrlKey: true, shiftKey: true });
     expect(testState.mutate.mock.lastCall?.[0]).toEqual([
@@ -625,7 +643,7 @@ describe("KeyboardSettingsSection", () => {
       ),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", {
+      withinShortcutGroup("Plugin commands").getByRole("button", {
         name: "Record shortcut for Open plugin issue, current shortcut unassigned",
       }),
     ).toBeTruthy();
@@ -658,7 +676,7 @@ describe("KeyboardSettingsSection", () => {
     expect(within(desktopGroup!).getByText("Ctrl + N")).toBeDefined();
     expect(within(defaults).queryByText("macOS web")).toBeNull();
     expect(within(defaults).queryByText("Windows/Linux web")).toBeNull();
-    const recorder = screen.getByRole("button", {
+    const recorder = withinShortcutGroup("Threads").getByRole("button", {
       name: "Record shortcut for New thread, current shortcut Ctrl + Shift + O",
     });
     const recorderShortcut = within(recorder).getByText("Ctrl + Shift + O");
@@ -691,7 +709,7 @@ describe("KeyboardSettingsSection", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Clear shortcut for New thread",
       }),
     );
@@ -701,7 +719,7 @@ describe("KeyboardSettingsSection", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Reset shortcut for New thread",
       }),
     );
@@ -713,7 +731,7 @@ describe("KeyboardSettingsSection", () => {
 
   it("lets users assign a command that has no default shortcut", () => {
     render(<KeyboardSettingsSection />);
-    const recorder = screen.getByRole("button", {
+    const recorder = withinShortcutGroup("Threads").getByRole("button", {
       name: "Record shortcut for Rename thread, current shortcut unassigned",
     });
     expect(recorder.hasAttribute("disabled")).toBe(false);
@@ -747,7 +765,7 @@ describe("KeyboardSettingsSection", () => {
 
   it("keeps unaffected shortcut controls stable while saving", () => {
     const { rerender } = render(<KeyboardSettingsSection />);
-    const recorder = screen.getByRole("button", {
+    const recorder = withinShortcutGroup("Threads").getByRole("button", {
       name: /^Record shortcut for New thread,/,
     });
     fireEvent.click(recorder);
@@ -762,7 +780,7 @@ describe("KeyboardSettingsSection", () => {
     expect(testState.recorderButtonCalls.size).toBe(0);
     expect(recorder.matches(":disabled")).toBe(true);
     expect(
-      screen
+      withinShortcutGroup("Threads")
         .getByRole("button", { name: /^Record shortcut for Search threads/ })
         .closest('[aria-busy="true"]'),
     ).toBeNull();
@@ -774,9 +792,12 @@ describe("KeyboardSettingsSection", () => {
 
   it("asks before replacing a conflicting assignment and supports cancel", () => {
     render(<KeyboardSettingsSection />);
-    const newThreadRecorder = screen.getByRole("button", {
-      name: "Record shortcut for New thread, current shortcut Ctrl + Shift + O",
-    });
+    const newThreadRecorder = withinShortcutGroup("Threads").getByRole(
+      "button",
+      {
+        name: "Record shortcut for New thread, current shortcut Ctrl + Shift + O",
+      },
+    );
     fireEvent.click(newThreadRecorder);
     fireEvent.keyDown(newThreadRecorder, {
       key: "U",
@@ -784,7 +805,7 @@ describe("KeyboardSettingsSection", () => {
       shiftKey: true,
     });
 
-    const jumpRecorder = screen.getByRole("button", {
+    const jumpRecorder = withinShortcutGroup("Threads").getByRole("button", {
       name: "Record shortcut for Open thread 1, current shortcut Ctrl + Shift + 1",
     });
     fireEvent.click(jumpRecorder);
@@ -820,7 +841,7 @@ describe("KeyboardSettingsSection", () => {
 
   it("rolls reset-all draft state back when the mutation fails", () => {
     render(<KeyboardSettingsSection />);
-    const recorder = screen.getByRole("button", {
+    const recorder = withinShortcutGroup("Threads").getByRole("button", {
       name: "Record shortcut for New thread, current shortcut Ctrl + Shift + O",
     });
     fireEvent.click(recorder);
@@ -833,7 +854,7 @@ describe("KeyboardSettingsSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reset all" }));
     expect(testState.mutate.mock.lastCall?.[0]).toEqual([]);
     expect(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Record shortcut for New thread, current shortcut Ctrl + Shift + O",
       }),
     ).toBeDefined();
@@ -843,7 +864,7 @@ describe("KeyboardSettingsSection", () => {
     act(() => rollback());
 
     expect(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Record shortcut for New thread, current shortcut Ctrl + Shift + U",
       }),
     ).toBeDefined();
@@ -864,7 +885,7 @@ describe("KeyboardSettingsSection", () => {
     expect(within(defaults).queryByText("Windows/Linux web")).toBeNull();
     expect(within(defaults).queryByText("Ctrl + Shift + 1")).toBeNull();
     expect(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Record shortcut for Open thread 1, current shortcut ⌃ 1",
       }),
     ).toBeDefined();
@@ -883,7 +904,7 @@ describe("KeyboardSettingsSection", () => {
     const desktopGroup = within(defaults).getByText("Desktop").parentElement;
     expect(within(desktopGroup!).getByText("⌘ 1")).toBeDefined();
     expect(
-      screen.getByRole("button", {
+      withinShortcutGroup("Threads").getByRole("button", {
         name: "Record shortcut for Open thread 1, current shortcut ⌘ 1",
       }),
     ).toBeDefined();
