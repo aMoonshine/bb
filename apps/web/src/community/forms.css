@@ -43,6 +43,7 @@
 .community-thanks > p:not(.community-eyebrow) {
   font-size: 1.0625rem;
   line-height: 1.7;
+  margin: 0 0 16px;
 }
 .community-help {
   line-height: 1.6;
