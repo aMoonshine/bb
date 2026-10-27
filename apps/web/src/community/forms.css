@@ -260,8 +260,11 @@
   line-height: 1.25;
   letter-spacing: -0.02em;
   font-weight: 650;
-  color: var(--dim);
+  color: var(--heading);
 }
 .community-section:first-of-type {
   margin-top: 16px;
+}
+.community-page .community-section + fieldset {
+  padding-top: 16px;
 }
