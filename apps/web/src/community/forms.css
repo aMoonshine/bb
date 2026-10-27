@@ -26,7 +26,7 @@
   display: block;
 }
 .community-intro {
-  padding: 64px 0 24px;
+  padding: 64px 0 8px;
 }
 .community-eyebrow {
   margin: 0 0 20px;
@@ -260,5 +260,8 @@
   line-height: 1.25;
   letter-spacing: -0.02em;
   font-weight: 650;
-  color: var(--heading);
+  color: var(--dim);
+}
+.community-section:first-of-type {
+  margin-top: 16px;
 }
