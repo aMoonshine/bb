@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { useQuery } from "@tanstack/react-query";
 import { recordTelemetryEvent } from "@/components/onboarding/onboarding-telemetry";
@@ -8,7 +8,6 @@ import {
   changelogEntriesQueryOptions,
 } from "./changelog-preview";
 import {
-  type ReleaseImage,
   type ReleasePreview,
   resolveReleasePreview,
 } from "./release-notes-model";
@@ -108,52 +107,29 @@ export function ReleaseNotesPreviewContent({
     <section
       aria-labelledby={headingId}
       data-updates-domain="release-notes"
-      className="@container/release-notes flex min-w-0 flex-col gap-3 px-4 py-3.5"
+      className="flex min-w-0 flex-col gap-3 px-4 py-3.5"
     >
       <h3 id={headingId} className="text-xs font-medium text-muted-foreground">
         {updateAvailable
           ? `What's in bb ${version}`
           : `What's new in bb ${version}`}
       </h3>
-      <div className="flex min-w-0 flex-col gap-3 @min-[34rem]/release-notes:flex-row @min-[34rem]/release-notes:items-start @min-[34rem]/release-notes:gap-4">
-        {preview.image === null ? null : (
-          <ReleaseNotesImage image={preview.image} />
-        )}
-        <ul className="flex min-w-0 flex-1 flex-col gap-2.5">
-          {preview.highlights.map((highlight) => (
-            <li key={highlight.title} className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-sm font-medium text-foreground">
-                {highlight.title}
+      <ul className="flex min-w-0 flex-col gap-2.5">
+        {preview.highlights.map((highlight) => (
+          <li key={highlight.title} className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-sm font-medium text-foreground">
+              {highlight.title}
+            </span>
+            {highlight.description === "" ? null : (
+              <span className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+                <ReactMarkdown components={DESCRIPTION_COMPONENTS} skipHtml>
+                  {highlight.description}
+                </ReactMarkdown>
               </span>
-              {highlight.description === "" ? null : (
-                <span className="line-clamp-2 text-xs leading-snug text-muted-foreground">
-                  <ReactMarkdown components={DESCRIPTION_COMPONENTS} skipHtml>
-                    {highlight.description}
-                  </ReactMarkdown>
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
+            )}
+          </li>
+        ))}
+      </ul>
     </section>
-  );
-}
-
-function ReleaseNotesImage({ image }: { image: ReleaseImage }) {
-  const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  if (failedSrc === image.src) {
-    return null;
-  }
-  return (
-    <img
-      data-testid="release-notes-preview-image"
-      src={image.src}
-      alt={image.alt}
-      loading="lazy"
-      decoding="async"
-      className="aspect-[2/1] w-full shrink-0 rounded-md border border-border object-cover object-top @min-[34rem]/release-notes:aspect-video @min-[34rem]/release-notes:w-56"
-      onError={() => setFailedSrc(image.src)}
-    />
   );
 }

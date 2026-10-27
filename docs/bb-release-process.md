@@ -121,14 +121,6 @@ If any input is unclear, ask before bumping the version.
    redeploy `@bb/web` after the release commit lands so the site shows the new
    version.
 
-   Each release also adds one hero image under
-   `apps/web/public/changelog/<version>/` and references it as the first image
-   in its `CHANGELOG.md` entry, as
-   `![Alt text](https://getbb.app/changelog/<version>/<file>.jpg)`. It shows on
-   getbb.app/changelog and in the release notes preview on Settings → Updates,
-   which shows the first four `### Highlights` items and leaves the image out
-   when an entry has none.
-
 5. Make any release documentation updates requested by the user.
 
 6. Run validation.

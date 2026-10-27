@@ -539,11 +539,8 @@ describe("UpdatesSettingsSection", () => {
           name: "What's new in bb 0.46.0",
         }),
       ).toBeDefined();
-      expect(
-        within(preview!)
-          .getByTestId("release-notes-preview-image")
-          .getAttribute("src"),
-      ).toBe("https://getbb.app/changelog/0.46.0/navigation-rail.jpg");
+      expect(within(preview!).getByText("Navigation rail")).toBeDefined();
+      expect(within(preview!).queryByRole("img")).toBeNull();
       expect(recordTelemetryEvent).toHaveBeenCalledExactlyOnceWith({
         name: "release_notes_preview_shown",
         properties: { release_version: "0.46.0", update_available: false },
