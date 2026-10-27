@@ -32,6 +32,8 @@ jobs:
         run: |
           mkdir "%RUNNER_TEMP%\app-profile"
           pnpm exec turbo run test --filter=@bb/app --continue --concurrency=2 --output-logs=full > "%RUNNER_TEMP%\app-profile\warmup.log" 2>&1
+      - name: Install diagnostic profiler hooks
+        run: node .github/scripts/prepare-app-profile.mjs
       - name: Profile the unchanged app shard
         shell: cmd
         env:
@@ -40,12 +42,12 @@ jobs:
         run: |
           if exist apps\app\node_modules\.vite\vitest rmdir /s /q apps\app\node_modules\.vite\vitest
           cd apps\app
-          node --cpu-prof --cpu-prof-dir="%RUNNER_TEMP%/app-profile" ../../node_modules/vitest/vitest.mjs run --config vitest.config.ts > "%RUNNER_TEMP%\app-profile\profile.log" 2>&1
+          node ../../node_modules/vitest/vitest.mjs run --config vitest.config.ts > "%RUNNER_TEMP%\app-profile\profile.log" 2>&1
       - name: Verify worker profiles exist
         shell: pwsh
         run: |
           $profiles = @(Get-ChildItem "$env:RUNNER_TEMP/app-profile" -Filter *.cpuprofile)
-          if ($profiles.Count -lt 2) { throw "Expected parent and worker CPU profiles" }
+          if ($profiles.Count -lt 100) { throw "Expected test-file CPU profiles" }
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         if: always()
         with:
