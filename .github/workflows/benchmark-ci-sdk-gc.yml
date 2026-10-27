@@ -1,0 +1,45 @@
+name: Compare SDK declaration GC settings
+on:
+  push:
+    branches: [bb/benchmark-ci-sdk-gc]
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        order: [default-first, large-first]
+        group: [linux, windows]
+        include:
+          - group: linux
+            runner: blacksmith-4vcpu-ubuntu-2404
+          - group: windows
+            runner: blacksmith-4vcpu-windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.x
+          package-manager-cache: false
+      - run: npm install --global pnpm@9.15.0 --ignore-scripts
+      - uses: ./.github/actions/windows-dependency-cache
+        if: runner.os == 'Windows'
+        timeout-minutes: 1
+        continue-on-error: true
+      - name: Install dependencies
+        shell: bash
+        run: bash .github/actions/setup-workspace/install-dependencies.sh --ignore-scripts --filter '!@bb/mobile'
+      - name: Warm SDK declarations and prerequisites
+        run: pnpm exec turbo run build:types --filter=@get-bb/plugin-sdk --output-logs=errors-only
+      - name: Compare complete SDK declaration builds
+        env:
+          BENCHMARK_ORDER: ${{ matrix.order }}
+        run: node .github/scripts/benchmark-ci-sdk-gc.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: sdk-gc-${{ matrix.group }}-${{ matrix.order }}
+          path: ${{ runner.temp }}/sdk-gc-results/
