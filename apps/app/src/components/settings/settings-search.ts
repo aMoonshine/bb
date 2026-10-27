@@ -9,6 +9,7 @@ import {
 
 export type SettingsSearchCondition =
   | "cliCommand"
+  | "composers"
   | "desktopBrowser"
   | "diffRenderers"
   | "fileOpeners"
@@ -60,6 +61,18 @@ export const SETTINGS_SEARCH_INDEX: Record<
       {
         title: "Setup guide",
         keywords: ["onboarding", "getting started", "welcome"],
+      },
+      {
+        title: "App links",
+        keywords: [
+          "always allow",
+          "native apps",
+          "linear",
+          "reflect",
+          "application links",
+          "approvals",
+          "permissions",
+        ],
       },
       {
         title: "Open links in the in-app browser",
@@ -160,6 +173,11 @@ export const SETTINGS_SEARCH_INDEX: Record<
         when: "diffRenderers",
       },
       {
+        title: "Composer",
+        keywords: ["prompt box", "input", "editor", "renderer", "plugin"],
+        when: "composers",
+      },
+      {
         title: "Sidebar footer",
         keywords: ["reorder", "buttons", "navigation"],
       },
@@ -231,6 +249,16 @@ export const SETTINGS_SEARCH_INDEX: Record<
     keywords: ["beta", "preview", "labs", "feature flags"],
     settings: [
       { title: "Early adopter", keywords: ["beta", "opt in", "preview"] },
+      {
+        title: "App links",
+        keywords: [
+          "application links",
+          "deep links",
+          "linear",
+          "slack",
+          "URL schemes",
+        ],
+      },
       { title: "Changelog preview", keywords: ["release notes", "updates"] },
       {
         title: "Server performance diagnostics",

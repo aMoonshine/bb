@@ -3,6 +3,7 @@ import {
   DOWNLOAD_FALLBACK_URL,
   DOWNLOAD_RELEASE_ASSET_BASE_URL,
   CAMPAIGN_PARAM_NAMES,
+  CLICK_ID_PARAM_NAMES,
 } from "./site";
 import type { CtaPlacement, DesktopPlatform } from "./site";
 
@@ -70,38 +71,11 @@ export async function handleDownload(
       }),
     );
   }
-  if (requestUrl.searchParams.get("instructions") === "1") {
-    const params = new URLSearchParams();
-    for (const name of [...CAMPAIGN_PARAM_NAMES, "placement"]) {
-      if (name === "gclid" && request.headers.get("Sec-GPC") === "1") {
-        continue;
-      }
-      const value = requestUrl.searchParams.get(name);
-      if (value) {
-        params.set(name, value);
-      }
-    }
-    const search = params.toString();
-    return redirectResponse(
-      `/install/${platform}${search ? `?${search}` : ""}`,
-    );
-  }
-  return handleInstallerDownload(platform, request);
-}
-
-export async function handleInstallerDownload(
-  platform: DesktopPlatform,
-  request: Request,
-): Promise<Response> {
   const asset = await resolveInstallerAsset(platform);
   if (!asset) {
     return redirectResponse(DOWNLOAD_FALLBACK_URL);
   }
-  return streamInstaller(
-    asset,
-    request.headers.get("range"),
-    request.headers.get("if-range"),
-  );
+  return streamInstaller(asset, range, request.headers.get("if-range"));
 }
 
 type InstallerAsset = {
@@ -362,11 +336,15 @@ function buildDownloadEventProperties(
   const requestUrl = new URL(args.requestUrl);
   let referrer = args.request.headers.get("referer");
   if (globalPrivacyControl) {
-    requestUrl.searchParams.delete("gclid");
+    for (const name of CLICK_ID_PARAM_NAMES) {
+      requestUrl.searchParams.delete(name);
+    }
     if (referrer) {
       try {
         const referrerUrl = new URL(referrer);
-        referrerUrl.searchParams.delete("gclid");
+        for (const name of CLICK_ID_PARAM_NAMES) {
+          referrerUrl.searchParams.delete(name);
+        }
         referrer = referrerUrl.href;
       } catch {
         referrer = null;

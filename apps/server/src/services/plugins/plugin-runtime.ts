@@ -1,3 +1,15 @@
+import {
+  realtimeSubscriptionTargetKey,
+  type PluginReadSubscriptionTarget,
+  calculateExponentialBackoffDelay,
+  isPluginOwnedIconPath,
+  parseNamespacedGlyph,
+  PLUGIN_SDK_MAJOR,
+  PLUGIN_SDK_VERSION,
+  type Thread,
+  type ThreadQueuedMessage,
+} from "@bb/domain";
+import { logPluginBuildWarnings } from "./plugin-log.js";
 import type { MachineEnrollmentService } from "../machines/machine-services.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
@@ -19,15 +31,6 @@ import { createRequire, registerHooks } from "node:module";
 import { performance } from "node:perf_hooks";
 import semver from "semver";
 import { HOST_ARTIFACT_MAX_BYTES } from "@bb/host-daemon-contract/protocol";
-import {
-  calculateExponentialBackoffDelay,
-  isPluginOwnedIconPath,
-  parseNamespacedGlyph,
-  PLUGIN_SDK_MAJOR,
-  PLUGIN_SDK_VERSION,
-  type Thread,
-  type ThreadQueuedMessage,
-} from "@bb/domain";
 import { buildPluginApp } from "@bb/plugin-build";
 import { PluginHostArtifactRegistry } from "./plugin-host-artifact-registry.js";
 import { getPluginBuildToolchain } from "./build-toolchain.js";
@@ -1142,7 +1145,13 @@ export function createPluginRuntime(context: PluginRuntimeContext) {
           },
         }),
       );
-      return { ...built, loader: "cjs" };
+      logPluginBuildWarnings({
+        dataDir: deps.dataDir,
+        logger,
+        pluginId: row.id,
+        warnings: built.warnings,
+      });
+      return { path: built.path, digest: built.digest, loader: "cjs" };
     }
     if (row.sourceKind === "path") return buildSource();
     if (
@@ -1217,11 +1226,17 @@ export function createPluginRuntime(context: PluginRuntimeContext) {
           : "plugin source is newer than dist/app.js";
         logger.info(`plugin ${row.id}: rebuilding frontend bundle (${reason})`);
         try {
-          await buildPluginApp(
+          const app = await buildPluginApp(
             row.rootDir,
             deps.appVersion,
             await getPluginBuildToolchain(deps),
           );
+          logPluginBuildWarnings({
+            dataDir: deps.dataDir,
+            logger,
+            pluginId: row.id,
+            warnings: app.migrationWarnings,
+          });
           setDevBuildProblem(row.id, "frontend", null);
         } catch (error) {
           const message =
@@ -1619,6 +1634,38 @@ export function createPluginRuntime(context: PluginRuntimeContext) {
       getLoopbackBaseUrl: () => boundLoopbackBaseUrl,
       rpcCaller: rpcCallers.issue(row.id),
       invalidateRpc: (tags) => deps.hub.notifyPluginChanged(row.id, tags),
+      whileRpcWatched: (method, handler) => {
+        const active = new Map<string, AbortController>();
+        const isWatchedRead = (target: PluginReadSubscriptionTarget) =>
+          target.pluginId === row.id && target.method === method;
+        const stop = deps.hub.onWatchedTargets(["plugin-read"], (change) => {
+          for (const target of change.stopped.filter(isWatchedRead)) {
+            const key = realtimeSubscriptionTargetKey(target);
+            active.get(key)?.abort();
+            active.delete(key);
+          }
+          for (const target of change.started.filter(isWatchedRead)) {
+            const controller = new AbortController();
+            active.set(realtimeSubscriptionTargetKey(target), controller);
+            void Promise.resolve()
+              .then(() => {
+                if (!controller.signal.aborted)
+                  return handler(target.read, controller.signal);
+              })
+              .catch((error: unknown) => {
+                if (!controller.signal.aborted)
+                  deps.logger.warn(
+                    `Plugin ${row.id} watched RPC failed: ${String(error)}`,
+                  );
+              });
+          }
+        });
+        return () => {
+          stop();
+          for (const controller of active.values()) controller.abort();
+          active.clear();
+        };
+      },
       publishSignal: (channel, payload) => {
         deps.hub.notifyPluginSignal(row.id, channel, payload);
       },
@@ -1692,6 +1739,20 @@ export function createPluginRuntime(context: PluginRuntimeContext) {
           ports,
         });
       },
+      setNextTunnels: (config) => {
+        if (!deps.sharedPorts) {
+          throw new Error("host shared-port control plane is unavailable");
+        }
+        deps.sharedPorts.setNextTunnelConfig(row.id, config);
+      },
+      nextTunnelStatuses: () =>
+        (deps.sharedPorts?.listNextTunnelStatuses() ?? []).map((entry) => ({
+          hostId: entry.hostId,
+          hostName: entry.hostName,
+          ...entry.status,
+        })),
+      onNextTunnelStatusChange: (listener) =>
+        deps.sharedPorts?.onNextTunnelStatusChange(listener) ?? (() => {}),
       replaceDeclaredSharedPorts: (declarations) => {
         if (declarations.length > 0 && !deps.sharedPorts) {
           throw new Error("host shared-port control plane is unavailable");
@@ -1712,6 +1773,12 @@ export function createPluginRuntime(context: PluginRuntimeContext) {
           ...args,
           artifact: hostArtifactCandidate,
         });
+      },
+      openTunnelIngress: (audience) => {
+        if (!deps.openTunnelIngress) {
+          throw new Error("tunnel ingress is unavailable in this plugin host");
+        }
+        return deps.openTunnelIngress(audience);
       },
       registerAiService: (declaration) =>
         deps.aiServices.register({

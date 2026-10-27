@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   PluginMessageDirectiveProps,
-  PluginThreadPanelProps,
+  ExperimentalThreadActionTabProps,
 } from "@get-bb/plugin-sdk";
-import { useBbNavigate, useRealtime } from "@get-bb/plugin-sdk/app";
+import {
+  experimental_useAppPanel,
+  useBbNavigate,
+  useRealtime,
+} from "@get-bb/plugin-sdk/app";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -143,6 +147,7 @@ function embedAriaLabel(task: Task): string {
 
 export function TaskDirectiveCard({ attributes }: PluginMessageDirectiveProps) {
   const navigate = useBbNavigate();
+  const panel = experimental_useAppPanel();
   const taskKey = attributes.key?.trim() ?? "";
   const fallbackTitle = attributes.title?.trim() || null;
   const validKey = TASK_KEY_PATTERN.test(taskKey);
@@ -223,8 +228,8 @@ export function TaskDirectiveCard({ attributes }: PluginMessageDirectiveProps) {
 
   const { task } = state;
   const openInSidePanel = () => {
-    const opened = navigate.openThreadPanel({
-      actionId: "task",
+    const opened = panel.openTab({
+      tab: { id: "task", context: { kind: "thread" }, availability: "action" },
       title: task.key,
       params: { taskKey: task.key },
     });
@@ -272,7 +277,7 @@ export function TaskDirectiveCard({ attributes }: PluginMessageDirectiveProps) {
   );
 }
 
-function TaskEmbedPanelContent({ params }: PluginThreadPanelProps) {
+function TaskEmbedPanelContent({ params }: ExperimentalThreadActionTabProps) {
   const taskKey =
     isRecord(params) && typeof params.taskKey === "string"
       ? params.taskKey
@@ -302,7 +307,7 @@ function TaskEmbedPanelContent({ params }: PluginThreadPanelProps) {
   );
 }
 
-export function TaskEmbedPanel(props: PluginThreadPanelProps) {
+export function TaskEmbedPanel(props: ExperimentalThreadActionTabProps) {
   return (
     <TasksRefreshProvider>
       <TaskEmbedPanelContent {...props} />

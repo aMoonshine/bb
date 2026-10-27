@@ -4,6 +4,8 @@ import {
   CORE_TAG_SCOPE,
   createTaggedKeyedQueryOwner,
   invalidateTags,
+  KeyedCollection,
+  optimisticKeyedUpdate,
   optimisticQueryUpdate,
   runTaggedMutation,
   runTaggedRead,
@@ -24,6 +26,7 @@ function deferred<T>() {
   });
   return { promise, resolve, reject };
 }
+const collection = new KeyedCollection<unknown>("rows");
 function setup() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -223,6 +226,7 @@ it("shares one keyed observer, batches consumers, and retains data through refre
     client,
     queryKey: ["keyed"],
     scope: CORE_TAG_SCOPE,
+    collection,
     read: async (keys) => {
       requested.push([...keys]);
       if (failure) throw new Error("offline");
@@ -264,6 +268,69 @@ it("shares one keyed observer, batches consumers, and retains data through refre
   expect(owner.observer.getCurrentResult().error).toBeNull();
 });
 
+it.each(["refetch", "all", "key"] as const)(
+  "retains inactive rows during %s refresh and refreshes them when revisited",
+  async (refresh) => {
+    const client = setup();
+    let value = 1;
+    const requested: string[][] = [];
+    const owner = createTaggedKeyedQueryOwner({
+      client,
+      queryKey: ["switching"],
+      scope: CORE_TAG_SCOPE,
+      collection,
+      read: async (keys) => {
+        requested.push([...keys]);
+        return {
+          result: Object.fromEntries(keys.map((key) => [key, value])),
+          tags: [],
+          keyTags: Object.fromEntries(
+            keys.map((key) => [key, [`item:${key}`]]),
+          ),
+        };
+      },
+    });
+    const stopA = owner.subscribe(["a"], () => {});
+    disposers.push(owner.subscribe(["b"], () => {}));
+    await vi.waitFor(() =>
+      expect(owner.observer.getCurrentResult().data?.result).toEqual({
+        a: 1,
+        b: 1,
+      }),
+    );
+    stopA();
+    value = 2;
+    if (refresh === "refetch") await owner.observer.refetch();
+    else
+      await invalidateTags(
+        client,
+        CORE_TAG_SCOPE,
+        refresh === "all" ? null : ["item:a", "item:b"],
+      );
+    expect(owner.observer.getCurrentResult().data?.result).toEqual({
+      a: 1,
+      b: 2,
+    });
+    expect(requested).toEqual([["a", "b"], ["b"]]);
+    value = 3;
+    await owner.observer.refetch();
+    expect(owner.observer.getCurrentResult().data?.result).toEqual({
+      a: 1,
+      b: 3,
+    });
+    value = 4;
+    disposers.push(owner.subscribe(["a"], () => {}));
+    expect(owner.observer.getCurrentResult().data?.result.a).toBe(1);
+    await vi.waitFor(() =>
+      expect(owner.observer.getCurrentResult().data?.result).toEqual({
+        a: 4,
+        b: 3,
+      }),
+    );
+    expect(requested.at(-1)).toEqual(["a"]);
+  },
+);
+
 it("re-reads after a dormant read completes without a subscription to changes", async () => {
   const client = setup();
   const gate = deferred<void>();
@@ -273,6 +340,7 @@ it("re-reads after a dormant read completes without a subscription to changes", 
     client,
     queryKey: ["dormant"],
     scope: CORE_TAG_SCOPE,
+    collection,
     read: async () => {
       const captured = value;
       if (first) {
@@ -307,6 +375,7 @@ it("refreshes only keys matched by key tags and all keys matched by response tag
     client,
     queryKey: ["precise"],
     scope: CORE_TAG_SCOPE,
+    collection,
     read: async (keys) => {
       requested.push([...keys]);
       return {
@@ -359,6 +428,7 @@ it.each([false, true])(
       client,
       queryKey: ["partial"],
       scope: CORE_TAG_SCOPE,
+      collection,
       read,
     });
     disposers.push(owner.subscribe(["a", "b"], () => {}));
@@ -418,6 +488,7 @@ it("inherits retry and mount freshness defaults from the query client", async ()
     client,
     queryKey: ["defaults"],
     scope: CORE_TAG_SCOPE,
+    collection,
     read,
   });
   const stop = owner.subscribe(["a"], () => {});
@@ -446,6 +517,7 @@ it("loads new subscribers without rereading other rows during a keyed invalidati
     client,
     queryKey: ["membership"],
     scope: CORE_TAG_SCOPE,
+    collection,
     read,
   });
   disposers.push(owner.subscribe(["a", "b"], () => {}));
@@ -694,7 +766,7 @@ describe("optimistic tagged mutations", () => {
     },
   );
 
-  it("does not replace an accepted row prediction when only a different row refreshes", async () => {
+  it("retains an unsubscribed stale row with an accepted prediction and reads it fresh on resubscribe", async () => {
     const client = setup();
     const queryKey = ["optimistic-rows"];
     let value = 1;
@@ -703,6 +775,7 @@ describe("optimistic tagged mutations", () => {
       client,
       queryKey,
       scope: CORE_TAG_SCOPE,
+      collection,
       read: async (keys) => {
         if (failure && keys.includes("a")) throw new Error("read offline");
         return {
@@ -731,9 +804,7 @@ describe("optimistic tagged mutations", () => {
       async () => outcome(),
       {
         client,
-        optimistic: [
-          optimisticQueryUpdate<number>(queryKey, () => 2, ["result", "a"]),
-        ],
+        optimistic: [optimisticKeyedUpdate(collection, "a", () => 2)],
       },
     );
     expect(owner.observer.getCurrentResult().data?.result).toEqual({
@@ -795,7 +866,7 @@ it("re-reads when a write completes between a read resolving and its cache commi
   await vi.waitFor(() => expect(read.value()).toBe(3));
 });
 
-it("does not acknowledge a row read before the write from a later batch's start time", async () => {
+it("does not show a row read that started before the write once a later batch refreshes", async () => {
   const client = setup();
   const queryKey = ["row-receipts"];
   let value = 1;
@@ -809,6 +880,7 @@ it("does not acknowledge a row read before the write from a later batch's start 
     client,
     queryKey,
     scope: CORE_TAG_SCOPE,
+    collection,
     read,
   });
   const stopA = owner.subscribe(["a"], () => {});
@@ -828,9 +900,7 @@ it("does not acknowledge a row read before the write from a later batch's start 
     () => write.promise,
     {
       client,
-      optimistic: [
-        optimisticQueryUpdate<number>(queryKey, () => 2, ["result", "a"]),
-      ],
+      optimistic: [optimisticKeyedUpdate(collection, "a", () => 2)],
     },
   );
   const old = deferred<ReturnType<typeof response>>();

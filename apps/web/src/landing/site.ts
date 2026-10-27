@@ -59,18 +59,18 @@ export const UTM_PARAM_NAMES = [
   "utm_content",
 ] as const;
 
+export const CLICK_ID_PARAM_NAMES = ["gclid", "gbraid", "wbraid"] as const;
+
 export const CAMPAIGN_PARAM_NAMES = [
   ...UTM_PARAM_NAMES,
-  "gclid",
-  "gbraid",
-  "wbraid",
+  ...CLICK_ID_PARAM_NAMES,
 ] as const;
 
 export function downloadHref(
   platform: DesktopPlatform,
   placement: CtaPlacement,
 ): string {
-  return `${DESKTOP_DOWNLOADS[platform].redirectPath}?placement=${placement}&instructions=1`;
+  return `${DESKTOP_DOWNLOADS[platform].redirectPath}?placement=${placement}`;
 }
 
 declare const __SITE_ORIGIN__: string;

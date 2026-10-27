@@ -1,3 +1,4 @@
+import { useCorePageTitle } from "./core-page-title";
 import { type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
@@ -14,7 +15,6 @@ import type { ProjectResponse } from "@bb/server-contract";
 import { Icon } from "@bb/shared-ui/icon";
 import { useRedirectRetiredPluginPaths } from "@/lib/retired-plugin-redirect";
 import { TooltipProvider } from "@bb/shared-ui/tooltip";
-import { RESOURCE_ROUTE_LABEL_EVENT } from "@bb/shared-ui/resource-route-label";
 import {
   SidebarInset,
   SidebarProvider,
@@ -30,13 +30,18 @@ import {
 import { CommandPalette } from "@/components/commands/CommandPalette";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import {
-  resolveAutomationBreadcrumbs,
   resolvePluginsWorkspaceHeaderMeta,
   resolveSkillsWorkspaceHeaderMeta,
-  resolveToolsBreadcrumbs,
+  resolveToolsSection,
+  type ToolsSectionId,
 } from "@/components/tools/tools-navigation";
 import { AppBreadcrumbs } from "./AppBreadcrumbs";
-import { resourceRouteLabelAtom } from "./resourceRouteLabelAtom";
+import { PageTitleHeader } from "./PageTitleHeader";
+import {
+  PageTitleHookHost,
+  usePageTitleValue,
+  focusedPageTitleAtom,
+} from "./page-title";
 import { AppPageHeader, HEADER_ICON_BUTTON_CLASS } from "./AppPageHeader";
 import { stripProjectThreads } from "@/hooks/queries/project-queries";
 import { useSidebarNavigation } from "@/hooks/queries/sidebar-navigation-query";
@@ -95,7 +100,6 @@ import {
   getRootComposeRoutePath,
   getThreadRoutePath,
   isProjectlessProjectId,
-  PLUGIN_PANEL_ROUTE_PATH,
   SETTINGS_ROUTE_PATH,
 } from "@/lib/route-paths";
 import { useQuickCreateProjectController } from "@/hooks/useQuickCreateProject";
@@ -118,7 +122,10 @@ import { isIOSWebKit } from "@/lib/ios-webkit";
 import { wsManager } from "@/lib/ws";
 import { splitLayoutAtom } from "@/lib/split-layout/atoms";
 import { findPaneByThread } from "@/lib/split-layout";
-import { applyThreadOpenToLayout } from "@/views/thread-detail/splitThreadNavigation";
+import {
+  applyThreadOpenToLayout,
+  paneContentForPathname,
+} from "@/views/thread-detail/splitThreadNavigation";
 import { useAppSettingsRouteMemory } from "@/hooks/useAppSettingsRouteMemory";
 import { useSetRootComposeProjectId } from "@/lib/root-compose-selection";
 import { BackToAppCommandHandler } from "./BackToAppCommandHandler";
@@ -339,6 +346,7 @@ function resolveRouteTitle(pathname: string): { title: string } | undefined {
 }
 
 interface AppHeaderProps {
+  resourceSection: ToolsSectionId | null;
   usesProjectChromeStyle: boolean;
   usesDesktopChrome: boolean;
   projectId?: string;
@@ -353,6 +361,7 @@ interface AppHeaderProps {
 }
 
 function AppHeader({
+  resourceSection,
   usesProjectChromeStyle,
   usesDesktopChrome,
   projectId,
@@ -362,13 +371,29 @@ function AppHeader({
   pluginPanelSubPath,
   meta,
 }: AppHeaderProps) {
-  const headerBreadcrumbs = meta.breadcrumbs;
+  const pageTitle = usePageTitleValue();
+  const headerBreadcrumbs = pluginPanelChrome
+    ? undefined
+    : (pageTitle?.breadcrumbs ?? meta.breadcrumbs);
   const headerTitle =
-    headerBreadcrumbs || usesProjectChromeStyle ? undefined : meta.title;
+    headerBreadcrumbs || usesProjectChromeStyle
+      ? undefined
+      : (pageTitle?.title ?? meta.title);
 
   const hasCenterContent = Boolean(headerBreadcrumbs) || Boolean(headerTitle);
 
-  const center = headerBreadcrumbs ? (
+  const center = resourceSection ? (
+    <PageTitleHeader
+      icon={
+        <Icon
+          name={resourceSection === "plugins" ? "Plug02" : "Zap"}
+          className="size-4 shrink-0 text-muted-foreground"
+        />
+      }
+      title={resourceSection === "plugins" ? "Plugins" : "Skills"}
+      value={pageTitle}
+    />
+  ) : headerBreadcrumbs ? (
     <div className="min-w-0 flex-1">
       <AppBreadcrumbs
         breadcrumbs={headerBreadcrumbs}
@@ -422,6 +447,18 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const location = useLocation();
+  return (
+    <PageTitleHookHost
+      usePageTitle={useCorePageTitle}
+      subPath={location.pathname + location.search}
+    >
+      <AppLayoutContent>{children}</AppLayoutContent>
+    </PageTitleHookHost>
+  );
+}
+
+function AppLayoutContent({ children }: AppLayoutProps) {
   const quickCreateProject = useQuickCreateProjectController();
   const isCompactViewport = useIsCompactViewport();
   const store = useStore();
@@ -439,53 +476,24 @@ export function AppLayout({ children }: AppLayoutProps) {
   useRedirectRetiredPluginPaths();
   const { projectId, threadId, isThreadView, isArchivedView, isRootView } =
     useRouteState();
-  const [resourceRouteLabel, setResourceRouteLabel] = useAtom(
-    resourceRouteLabelAtom,
-  );
-  useEffect(() => {
-    setResourceRouteLabel(null);
-    function handleResourceRouteLabel(event: Event) {
-      if (!(event instanceof CustomEvent)) return;
-      const detail = event.detail;
-      if (
-        typeof detail !== "object" ||
-        detail === null ||
-        !("label" in detail) ||
-        (typeof detail.label !== "string" && detail.label !== null)
-      ) {
-        return;
-      }
-      setResourceRouteLabel(detail.label);
-    }
-    window.addEventListener(
-      RESOURCE_ROUTE_LABEL_EVENT,
-      handleResourceRouteLabel,
-    );
-    return () => {
-      window.removeEventListener(
-        RESOURCE_ROUTE_LABEL_EVENT,
-        handleResourceRouteLabel,
-      );
-    };
-  }, [location.pathname, setResourceRouteLabel]);
+  const focusedPageTitle = useAtomValue(focusedPageTitleAtom);
   const navigate = useNavigate();
   const navPanelChrome = usePluginNavPanelChrome();
   const isGlobalSettingsView =
     matchPath(`${SETTINGS_ROUTE_PATH}/*`, location.pathname) !== null;
-  const pluginPanelMatch = matchPath(
-    PLUGIN_PANEL_ROUTE_PATH,
-    location.pathname,
-  );
-  const pluginPanelEntry = pluginPanelMatch
+  const routeContent = paneContentForPathname(location.pathname);
+  const pluginPanelRoute =
+    routeContent?.kind === "plugin-panel" ? routeContent : null;
+  const pluginPanelEntry = pluginPanelRoute
     ? navPanelChrome.find(
         (candidate) =>
-          candidate.chrome.pluginId === pluginPanelMatch.params.pluginId &&
-          candidate.chrome.path === pluginPanelMatch.params.panelPath,
+          candidate.chrome.pluginId === pluginPanelRoute.pluginId &&
+          candidate.chrome.path === pluginPanelRoute.panelPath,
       )
     : undefined;
   const pluginPanel = pluginPanelEntry?.panel ?? undefined;
   const pluginPanelChrome = pluginPanelEntry?.chrome;
-  const pluginPanelSubPath = pluginPanelMatch?.params["*"] ?? "";
+  const pluginPanelSubPath = pluginPanelRoute?.subPath ?? "";
   const routeSidebar = resolveRouteSidebar(
     location.pathname,
     pluginPanel === undefined
@@ -591,7 +599,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const startWidthRef = useRef(0);
   const liveWidthRef = useRef(0);
   const animationFrameRef = useRef<number | null>(null);
-  const showHeader = !isThreadView && !isRootView && pluginPanelMatch === null;
+  const showHeader = !isThreadView && !isRootView && pluginPanelRoute === null;
   const [desktopInfo] = useState(getBbDesktopInfo);
   const desktopWindowState = useDesktopWindowState();
   const usesDesktopChrome = shouldUseMacosDesktopChrome(desktopInfo);
@@ -626,16 +634,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     : threadId
       ? `Thread ${threadId.slice(0, 8)}`
       : "Thread";
-  const toolsBreadcrumbs = resolveToolsBreadcrumbs(
-    location.pathname,
-    location.search,
-    resourceRouteLabel,
-  );
-  const automationBreadcrumbs = resolveAutomationBreadcrumbs(
-    location.pathname,
-    resourceRouteLabel,
-  );
-  const documentTitleBreadcrumbs = toolsBreadcrumbs ?? automationBreadcrumbs;
   const resourceWorkspaceHeaderMeta =
     resolvePluginsWorkspaceHeaderMeta(location.pathname, location.search) ??
     resolveSkillsWorkspaceHeaderMeta(location.pathname);
@@ -647,49 +645,49 @@ export function AppLayout({ children }: AppLayoutProps) {
             title: "",
             breadcrumbs: resourceWorkspaceHeaderMeta.breadcrumbs,
           }
-        : automationBreadcrumbs !== null
-          ? { title: "", breadcrumbs: automationBreadcrumbs }
-          : isArchivedView && projectId
-            ? isProjectlessProjectId(projectId)
-              ? {
-                  title: "",
-                  breadcrumbs: [
-                    { label: "Threads", to: getRootComposeRoutePath() },
-                    ...(archivedSectionName
-                      ? [{ label: archivedSectionName }]
-                      : []),
-                    { label: "Archived" },
-                  ],
-                }
-              : {
-                  title: "",
-                  breadcrumbs: [
-                    {
-                      label: projectLabel ?? projectId,
-                      to: getLegacyProjectComposeRoutePath(projectId),
-                    },
-                    { label: "Archived" },
-                  ],
-                }
-            : projectId
-              ? {
-                  title: projectLabel ?? projectId,
-                }
-              : (resolveRouteTitle(location.pathname) ?? { title: "" });
+        : isArchivedView && projectId
+          ? isProjectlessProjectId(projectId)
+            ? {
+                title: "",
+                breadcrumbs: [
+                  { label: "Threads", to: getRootComposeRoutePath() },
+                  ...(archivedSectionName
+                    ? [{ label: archivedSectionName }]
+                    : []),
+                  { label: "Archived" },
+                ],
+              }
+            : {
+                title: "",
+                breadcrumbs: [
+                  {
+                    label: projectLabel ?? projectId,
+                    to: getLegacyProjectComposeRoutePath(projectId),
+                  },
+                  { label: "Archived" },
+                ],
+              }
+          : projectId
+            ? {
+                title: projectLabel ?? projectId,
+              }
+            : (resolveRouteTitle(location.pathname) ?? { title: "" });
 
   const documentTitle = (() => {
+    if (focusedPageTitle) {
+      if (focusedPageTitle.windowTitle !== undefined)
+        return focusedPageTitle.windowTitle;
+      const leaf =
+        focusedPageTitle.title ?? focusedPageTitle.breadcrumbs?.at(-1)?.label;
+      const base =
+        pluginPanel?.title ?? focusedPageTitle.breadcrumbs?.[0]?.label;
+      if (leaf) return base && base !== leaf ? `${leaf} · ${base}` : leaf;
+    }
     if (isThreadView) {
       return threadDisplayTitle;
     }
     if (pluginPanel) {
       return pluginPanel.title;
-    }
-    if (documentTitleBreadcrumbs) {
-      const sectionLabel = documentTitleBreadcrumbs[0]?.label ?? "BB";
-      const pageLabel = documentTitleBreadcrumbs.at(-1)?.label ?? sectionLabel;
-      return pageLabel === sectionLabel
-        ? sectionLabel
-        : `${pageLabel} · ${sectionLabel}`;
     }
     if (isArchivedView && projectId) {
       if (isProjectlessProjectId(projectId)) {
@@ -838,6 +836,11 @@ export function AppLayout({ children }: AppLayoutProps) {
                   >
                     {showHeader ? (
                       <AppHeader
+                        resourceSection={
+                          resourceWorkspaceHeaderMeta
+                            ? resolveToolsSection(location.pathname)
+                            : null
+                        }
                         usesDesktopChrome={usesDesktopChrome}
                         usesProjectChromeStyle={isRootView || isArchivedView}
                         projectId={projectId}
