@@ -1,4 +1,4 @@
-name: Compare Windows SDK heap limits
+name: Compare Linux SDK heap limits
 on:
   push:
     branches: [bb/benchmark-ci-sdk-heap]
@@ -12,10 +12,10 @@ jobs:
       fail-fast: false
       matrix:
         order: [default-first, large-first]
-        group: [windows]
+        group: [linux]
         include:
-          - group: windows
-            runner: blacksmith-4vcpu-windows-2025
+          - group: linux
+            runner: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
