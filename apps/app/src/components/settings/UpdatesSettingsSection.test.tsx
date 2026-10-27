@@ -567,7 +567,7 @@ describe("UpdatesSettingsSection", () => {
       renderSection();
 
       expect(await screen.findByText("Published highlight")).toBeDefined();
-      expect(screen.getByText("from the live changelog.")).toBeDefined();
+      expect(screen.getByText("From the live changelog.")).toBeDefined();
       expect(screen.queryByText("Customizable sidebar navigation")).toBeNull();
     });
 

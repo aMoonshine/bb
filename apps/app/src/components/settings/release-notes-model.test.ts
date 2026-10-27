@@ -213,10 +213,10 @@ A lede.
 `);
 
 const SAMPLE_HIGHLIGHTS = [
-  { title: "First highlight", description: "with a description." },
-  { title: "Second", description: "with a period." },
-  { title: "Third", description: "without punctuation." },
-  { title: "Fourth", description: "shown." },
+  { title: "First highlight", description: "With a description." },
+  { title: "Second", description: "With a period." },
+  { title: "Third", description: "Without punctuation." },
+  { title: "Fourth", description: "Shown." },
 ];
 
 describe("releaseHighlights", () => {
@@ -330,7 +330,7 @@ Bundled lede.
       image: null,
     });
     expect(resolveReleasePreview("0.48.0", undefined, bundled)).toEqual({
-      highlights: [{ title: "Bundled", description: "older copy." }],
+      highlights: [{ title: "Bundled", description: "Older copy." }],
       image: {
         src: "https://getbb.app/changelog/0.48.0/bundled.jpg",
         alt: "Bundled",

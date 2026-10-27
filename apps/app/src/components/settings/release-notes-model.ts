@@ -100,7 +100,10 @@ function highlightFromItem(item: string): ReleaseHighlight | null {
     .slice(match[0].length)
     .replace(/^[:.]/, "")
     .trim();
-  return { title, description };
+  return {
+    title,
+    description: description.charAt(0).toUpperCase() + description.slice(1),
+  };
 }
 
 export function releaseHighlights(entry: ChangelogEntry): ReleaseHighlight[] {

@@ -152,7 +152,7 @@ function ReleaseNotesImage({ image }: { image: ReleaseImage }) {
       alt={image.alt}
       loading="lazy"
       decoding="async"
-      className="aspect-video w-full shrink-0 rounded-md border border-border object-cover @min-[34rem]/release-notes:w-56"
+      className="aspect-[2/1] w-full shrink-0 rounded-md border border-border object-cover object-top @min-[34rem]/release-notes:aspect-video @min-[34rem]/release-notes:w-56"
       onError={() => setFailedSrc(image.src)}
     />
   );
