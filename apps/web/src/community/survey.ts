@@ -2,9 +2,9 @@ import { z } from "zod";
 
 export const SURVEY_TITLE = "Help shape the future of bb!";
 export const SURVEY_DESCRIPTION =
-  "We want to continue building with you and would love to know what you'd want to see from the bb community. From meetups to merch to whatever you'd like. This survey should take ~3 minutes.";
+  "We're thinking about where to take bb next and would love to hear from you. From product changes to meetups and merch, your input is important for how we think about what's next.";
 export const SURVEY_PURPOSE =
-  "As a small thank you, we'll send you bb stickers. Thanks for building with us!";
+  "This survey should take ~3 minutes. As a small thank you, we'll send you bb stickers free of charge. Thanks for building with us!";
 export const MEETUP_FRAMING =
   "We're starting bb meetups: small get-togethers to build with agents and see how other people work. Tell us where you are so we know where to start.";
 export const TEAM_WORK_OPTIONS = ["2–4 people", "5 or more"];
