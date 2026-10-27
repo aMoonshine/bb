@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const SURVEY_TITLE = "Help shape the bb community";
+export const SURVEY_TITLE = "Help shape the future of bb!";
 export const SURVEY_DESCRIPTION =
   "We want to continue building with you and would love to know what you'd want to see from the bb community. From meetups to merch to whatever you'd like. This survey should take ~3 minutes.";
 export const SURVEY_PURPOSE =
