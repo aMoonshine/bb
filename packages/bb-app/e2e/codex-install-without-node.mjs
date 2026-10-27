@@ -43,6 +43,15 @@ let launcher;
 let savedPaths;
 let stage = "prepare isolated runner";
 
+function diagnostic(value) {
+  return String(value)
+    .replace(/\x1b\[[0-?]*[ -/]*[@-~]/gu, "")
+    .replaceAll(root ?? "[no fixture]", "[fixture]")
+    .replace(/[A-Za-z]:[\\/][^\r\n]*/gu, "[runner path omitted]")
+    .replace(/https?:\/\/[^\s"'<>]+/gu, "[URL omitted]")
+    .slice(-8_000);
+}
+
 function pass(check) {
   report.checks.push(check);
   process.stdout.write(`PASS: ${check}\n`);
@@ -214,7 +223,11 @@ try {
       headers: { "content-type": "application/json" },
       signal: AbortSignal.timeout(600_000),
     });
-    assert(response.ok, `API request failed (${response.status})`);
+    if (!response.ok) {
+      throw new Error(
+        `API request failed (${response.status}): ${diagnostic(await response.text())}`,
+      );
+    }
     return options.ndjson
       ? (await response.text())
           .trim()
@@ -301,6 +314,22 @@ try {
     body: JSON.stringify({ provider: "codex", actionKind: "install" }),
     ndjson: true,
   });
+  report.install = {
+    events: events.filter((event) => event.type !== "output"),
+    output: diagnostic(
+      events
+        .filter((event) => event.type === "output")
+        .map((event) => event.text)
+        .join(""),
+    ),
+  };
+  report.install.events = report.install.events.map((event) => ({
+    type: event.type,
+    ...(event.type === "completed"
+      ? { success: event.success, exitCode: event.exitCode }
+      : {}),
+    ...(event.type === "error" ? { message: diagnostic(event.message) } : {}),
+  }));
   assert.match(
     events.find((event) => event.type === "started")?.command ?? "",
     /https:\/\/chatgpt\.com\/codex\/install\.ps1/u,
@@ -356,7 +385,8 @@ try {
     "Provider health is installed and unauthenticated; no credentials or sign-in completion used",
   );
   report.status = "passed";
-} catch {
+} catch (error) {
+  report.failure = diagnostic(error.message);
   report.failedStage = stage;
   process.stderr.write(
     `FAIL: ${stage}; raw process output withheld from public artifacts\n`,
