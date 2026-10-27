@@ -93,10 +93,17 @@ export function codexLoginCommand(
   args: readonly string[],
   platform: NodeJS.Platform = process.platform,
 ): string {
-  const text = formatCommand(command, args);
-  return platform === "win32" && path.win32.isAbsolute(command)
-    ? `& ${text}`
-    : text;
+  if (platform === "win32") {
+    const text = [command, ...args]
+      .map((part) =>
+        /^[A-Za-z0-9_./:@+-]+$/u.test(part)
+          ? part
+          : `'${part.replaceAll("'", "''")}'`,
+      )
+      .join(" ");
+    return path.win32.isAbsolute(command) ? `& ${text}` : text;
+  }
+  return formatCommand(command, args);
 }
 
 export function codexInstallerCommand(

@@ -362,7 +362,7 @@ export function resolveAppServerLaunch(env: NodeJS.ProcessEnv = process.env): {
     : ["app-server"];
   const poolBaseUrl = env[CODEX_POOL_BASE_URL_ENV];
   const poolToken = env[CODEX_POOL_AUTH_TOKEN_ENV];
-  const resolvedCommand = command ?? resolveCodexCommand();
+  const resolvedCommand = command ?? resolveCodexCommand(env);
   if (!poolBaseUrl || !poolToken) return { command: resolvedCommand, args };
   return {
     command: resolvedCommand,

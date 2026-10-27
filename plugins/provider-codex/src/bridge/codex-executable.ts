@@ -6,6 +6,12 @@ export function codexNativeExecutablePath(
   env: NodeJS.ProcessEnv = process.env,
   platform: NodeJS.Platform = process.platform,
 ): string {
+  if (env.CODEX_INSTALL_DIR) {
+    return (platform === "win32" ? path.win32 : path.posix).join(
+      env.CODEX_INSTALL_DIR,
+      platform === "win32" ? "codex.exe" : "codex",
+    );
+  }
   if (platform === "win32") {
     const localAppData =
       env.LOCALAPPDATA ??

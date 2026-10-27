@@ -1,9 +1,13 @@
+import { experimental_hostToolchain as hostToolchain } from "@get-bb/plugin-sdk/process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetChatGptCloudflareCookiesForTests } from "../ai/chatgpt-fetch.js";
-import { resolveCodexCommand } from "./codex-executable.js";
+import {
+  codexNativeExecutablePath,
+  resolveCodexCommand,
+} from "./codex-executable.js";
 import {
   __testing,
   codexInstallerCommand,
@@ -382,10 +386,15 @@ describe("Codex native install", () => {
     vi.stubEnv("HOME", root);
     vi.stubEnv("USERPROFILE", root);
     vi.stubEnv("LOCALAPPDATA", path.join(root, "AppData", "Local"));
+    vi.stubEnv("CODEX_INSTALL_DIR", "");
+    vi.spyOn(hostToolchain, "environment").mockImplementation(
+      (env = process.env) => ({ ...env }),
+    );
   });
 
   afterEach(async () => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
     await fs.rm(root, { force: true, recursive: true });
   });
 
@@ -418,7 +427,10 @@ describe("Codex native install", () => {
     }
 
     expect(resolveCodexCommand()).toBe(
-      path.join(nativeBin, process.platform === "win32" ? "codex.exe" : "codex"),
+      path.join(
+        nativeBin,
+        process.platform === "win32" ? "codex.exe" : "codex",
+      ),
     );
     if (process.platform !== "win32") {
       const status = await getCodexProviderInstallationStatus(undefined, false);
@@ -442,6 +454,28 @@ describe("Codex native install", () => {
     expect(
       codexLoginCommand("/home/a/.local/bin/codex", ["login"], "linux"),
     ).toBe("/home/a/.local/bin/codex login");
+  });
+
+  it("escapes apostrophes in native Windows sign-in paths for PowerShell", () => {
+    const nativePath = "C:\\Users\\O'Brien\\Codex\\codex.exe";
+    expect(codexLoginCommand(nativePath, ["login"], "win32")).toBe(
+      "& 'C:\\Users\\O''Brien\\Codex\\codex.exe' login",
+    );
+  });
+
+  it("discovers the directory passed to OpenAI's native installer", () => {
+    expect(
+      codexNativeExecutablePath(
+        { CODEX_INSTALL_DIR: "C:\\Codex Tools" },
+        "win32",
+      ),
+    ).toBe("C:\\Codex Tools\\codex.exe");
+    expect(
+      codexNativeExecutablePath(
+        { CODEX_INSTALL_DIR: "/opt/codex/bin" },
+        "linux",
+      ),
+    ).toBe("/opt/codex/bin/codex");
   });
 
   it.each(["darwin", "linux", "win32"] as const)(

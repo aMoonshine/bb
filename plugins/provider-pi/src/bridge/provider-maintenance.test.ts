@@ -1,3 +1,4 @@
+import { experimental_hostToolchain as hostToolchain } from "@get-bb/plugin-sdk/process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -51,9 +52,13 @@ describe("Pi install prerequisites", () => {
     binDir = await fs.mkdtemp(path.join(os.tmpdir(), "bb-pi-no-npm-"));
     vi.stubEnv("PATH", binDir);
     vi.stubEnv("BB_PI_BRIDGE_COMMAND", "");
+    vi.spyOn(hostToolchain, "environment").mockImplementation(
+      (env = process.env) => ({ ...env }),
+    );
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     vi.unstubAllEnvs();
     await fs.rm(binDir, { force: true, recursive: true });
   });
