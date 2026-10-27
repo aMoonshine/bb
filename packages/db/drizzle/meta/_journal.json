@@ -1030,6 +1030,13 @@
       "when": 1792453324528,
       "tag": "0146_diff_viewed_files",
       "breakpoints": true
+    },
+    {
+      "idx": 147,
+      "version": "6",
+      "when": 1793120262323,
+      "tag": "0147_git_plugin_show_git_changes",
+      "breakpoints": true
     }
   ]
 }

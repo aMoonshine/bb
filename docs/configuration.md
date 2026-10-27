@@ -268,7 +268,6 @@ for the command surface.
 | `showDiagnosticEvents`                                                     | `false` in all builds               | Settings → General → Privacy & diagnostics → Show diagnostic events. Shows provider environment resolution and raw provider events bb does not yet understand in the timeline. Warnings, errors, and model fallback stay visible. Hidden diagnostics do not count toward timeline event or byte limits.                                                                                                                                                                                                                                        |
 | `steerActiveThreadOnEnter`                                                 | `true`                              | Settings → General → Default thread followup behavior, when no typeahead suggestion is active. `true` ("Steer"): Enter sends to the agent during its current run and Mod+Enter queues the message until the agent stops; `false` ("Queue") swaps them. Installs with saved settings or work from before the setting were migrated once to `false`.                                                                                                                                                                                             |
 | `confirmThreadArchive`                                                     | `true`                              | Settings → General → Thread archive confirmation. `false` archives a thread and its children in the app without a confirmation popup; the toast still offers Undo. CLI and SDK archives never prompt.                                                                                                                                                                                                                                                                                                                                          |
-| `showGitChanges`                                                           | `true`                              | Settings → General → Show Git changes and Commit button. `false` hides the untracked, uncommitted, and committed file summary and expanded file list above every thread composer, that shelf's pull-request status and actions, and the Commit action in the thread header and overflow menu. Thread relationships and workspace warnings stay visible.                                                                                                                                                                                        |
 | `keepHistoryAfterContextClear`                                             | `false`                             | Settings → General → Show messages from before a context clear. When `false`, a thread's timeline, conversation outline, and message lookup start at its latest `Context cleared` boundary; `true` keeps earlier messages, which load on scroll and appear in the outline and `bb thread log --message`. Clearing always starts a fresh provider conversation and resets the context meter.                                                                                                                                                    |
 | `summarizeShellCommands`                                                   | `true`                              | Settings → General → Summarize shell commands. `true` titles a shell command that runs `ls`, `find`, `grep`, `rg`, `cat`, `head`, `tail`, `nl`, or `sed -n` with a summary such as `Searched for X`, and the row does not expand. `false` titles every shell command row with its command (`Running …`, `Ran …`), expands it to the command and its output, and counts it as a command in step summaries. Native read and search tool rows keep their titles.                                                                                  |
 | `streamerMode`                                                             | `false`                             | Settings → General. Hides every `customModels` entry from the web and mobile pickers, `bb provider models`, and `sdk.providers.models`, for example before a screen share. Entries stay in `config.json`; a thread that names a hidden model still runs, and default model resolution keeps the full list, so a provider whose only models are custom still starts. A composer whose stored selection is hidden falls back to the provider default and records it on the next send; reselect the custom model after turning streamer mode off. |
@@ -292,7 +291,7 @@ On Linux browsers with native primary-selection support, middle-click focuses
 the terminal and pastes the primary selection independently of this setting.
 Unsupported browsers never substitute unrelated regular clipboard contents.
 
-Older clients that omit `showGitChanges`, `keepHistoryAfterContextClear`,
+Older clients that omit `keepHistoryAfterContextClear`,
 `summarizeShellCommands`, or `earlyAdopter` preserve the saved value. For older SDK callers, the
 general-settings API still accepts and returns `showUnhandledProviderEvents` as
 a deprecated alias of `showDiagnosticEvents`, and an existing value is
@@ -996,6 +995,16 @@ bundled skills), and `bbCli`, `pluginAuthoring`, `skillCreator`, and
 `submitPlugin` (individual skills). They apply the next time agent
 configuration is assembled. Disabling the plugin removes its introduction and
 skills.
+
+### Git
+
+The bundled Git plugin's `showGitChanges` (default `true`) is Show Git changes
+and Commit button on its plugin page. `false` hides the untracked, uncommitted,
+and committed file summary and expanded file list above every thread composer,
+that row's pull-request status and actions, and the Commit action in the thread
+header and overflow menu. Thread relationships and workspace warnings stay
+visible. Set it with `bb plugin config bb--git set showGitChanges false`.
+Upgrading keeps the value saved under Settings → General.
 
 ### Claude Code provider
 

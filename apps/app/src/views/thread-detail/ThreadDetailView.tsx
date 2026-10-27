@@ -10,7 +10,10 @@ import {
 } from "@/components/plugin/PluginPanelActions";
 import { useAppCommandHandler } from "@/components/commands/AppCommandProvider";
 import { GIT_DIFF_TAB_REFERENCE } from "@/lib/git-diff-tab";
-import { useGitWorkspaceStatus } from "@/hooks/queries/git-plugin-queries";
+import {
+  useGitWorkspaceStatus,
+  useShowGitChanges,
+} from "@/hooks/queries/git-plugin-queries";
 import {
   useThreadFixedTabs,
   createThreadFixedTabDescriptor,
@@ -1622,6 +1625,7 @@ function ThreadDetailViewInternal(
       return { ...childThreadsSection, pendingInteractions };
     }, [childThreadsSection, childPendingInteractions]);
   const isThreadTimelinePending = timelineLoading && timelineRows.length === 0;
+  const showGitChanges = useShowGitChanges();
   const gitActions = useThreadGitActions({
     environment,
     requestEnvironmentAction,
@@ -2074,8 +2078,6 @@ function ThreadDetailViewInternal(
           },
         }))
       : [];
-  const showGitChanges =
-    systemConfigQuery.data?.generalSettings.showGitChanges ?? false;
   const threadHeaderGitActions =
     executionUnavailable || !showGitChanges
       ? []

@@ -266,7 +266,12 @@ export function useRealtimeConnectionState(): PluginRealtimeConnectionState {
 }
 
 export function useSettings(): PluginSettingsState {
-  const pluginId = usePluginId();
+  return usePluginSettingsValues(usePluginId());
+}
+
+export function usePluginSettingsValues(
+  pluginId: string,
+): PluginSettingsState {
   const query = useQuery({
     queryKey: pluginSdkSettingsQueryKey(pluginId),
     queryFn: () => fetchPluginSdkSettings(fetch, pluginId),

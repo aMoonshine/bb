@@ -1,4 +1,5 @@
 import { GIT_PLUGIN_ID } from "@bb/domain";
+import { GIT_SHOW_CHANGES_SETTING } from "bb-plugin-bb--git/contract";
 import { gitRpcContract } from "bb-plugin-bb--git/rpc-contract";
 import {
   createGitStatusHook,
@@ -8,6 +9,7 @@ import { usePluginFrontendsSettled } from "@/lib/plugin-frontend-boot-state";
 import { usePluginFrontendRegistered } from "@/lib/plugin-slots";
 import {
   experimental_useRpcKeyedQuery as useRpcKeyedQuery,
+  usePluginSettingsValues,
 } from "@/lib/plugin-sdk-hooks";
 
 const useGitStatusQuery: GitStatusKeyedQuery = (args) => {
@@ -24,3 +26,8 @@ const useGitStatusQuery: GitStatusKeyedQuery = (args) => {
 };
 
 export const useGitWorkspaceStatus = createGitStatusHook(useGitStatusQuery);
+
+export function useShowGitChanges(): boolean {
+  const { values, isLoading } = usePluginSettingsValues(GIT_PLUGIN_ID);
+  return !isLoading && values?.[GIT_SHOW_CHANGES_SETTING] !== false;
+}
