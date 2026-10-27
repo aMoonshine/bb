@@ -324,10 +324,7 @@ export function formPage({
                     <h1 aria-label={title}>
                       Help shape the future of{" "}
                       <span className="community-nowrap">
-                        <span
-                          className="bb-mark community-heading-mark"
-                          aria-hidden
-                        />
+                        <span className="community-heading-mark" aria-hidden />
                         !
                       </span>
                     </h1>

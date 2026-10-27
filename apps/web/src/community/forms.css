@@ -39,14 +39,16 @@
   margin: 0 0 24px;
   color: var(--heading);
 }
-/* Inline wordmark sized to the heading, matching the marketplace hero. */
+/* Inline vector wordmark sized to the heading, so it stays sharp at any size. */
 .community-heading-mark {
   display: inline-block;
-  width: 0.95em;
+  width: 1em;
   height: 0.8em;
-  background-size: 177.78% 210.99%;
-  background-position: 50% 50.5%;
+  background: url("/brand/bb-logo-shaded.svg") center / contain no-repeat;
   vertical-align: -0.025em;
+}
+.dark .community-heading-mark {
+  background-image: url("/brand/bb-logo-flat-white.svg");
 }
 .community-nowrap {
   white-space: nowrap;
