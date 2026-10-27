@@ -5,7 +5,6 @@ import { THEME_INIT } from "../lib/theme";
 import css from "./forms.css?url";
 import {
   TEAM_WORK_OPTIONS,
-  STICKER_TIMING,
   SURVEY_DESCRIPTION,
   SURVEY_TITLE,
   SOLD_OUT,
@@ -192,7 +191,6 @@ function Survey({
         <strong>Last step.</strong> Your email, so we can send your stickers and
         share the results with you.
       </p>
-      <p className="community-meetup">{STICKER_TIMING}</p>
       <div className="community-field" id="question-email">
         <label htmlFor="email">Email</label>
         <input
@@ -311,7 +309,6 @@ export function formPage({
                     <p>We'll email you the results when they're in.</p>
                   </>
                 )}
-                <p>{STICKER_TIMING}</p>
               </section>
             ) : unavailable ? (
               <section className="community-thanks">

@@ -8,7 +8,6 @@ export const SURVEY_PURPOSE =
 export const MEETUP_FRAMING =
   "We're starting bb meetups: small get-togethers to build with agents and see how other people work. Tell us where you are so we know where to start.";
 export const TEAM_WORK_OPTIONS = ["2–4 people", "5 or more"];
-export const STICKER_TIMING = "We'll mail your stickers within a few weeks.";
 export const MEETUP_DECLINE = "Not for me right now";
 export const SOLD_OUT =
   "We've given out all the stickers for now. Thank you for answering.";
