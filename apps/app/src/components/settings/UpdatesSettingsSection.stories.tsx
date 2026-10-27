@@ -358,7 +358,7 @@ export function RowVariations() {
 
         <StoryRow
           label="Update available"
-          hint="A web install cannot replace itself, so its action copies the upgrade command. Release notes opens the new version's notes, and the new version's highlights preview below the row."
+          hint="A web install cannot replace itself, so its action copies the upgrade command. Release notes opens the new version's notes, and the new version's one-sentence summary shows below the row."
         >
           <div className="w-full">
             <BbUpdatesCard>

@@ -7,7 +7,7 @@ import type {
 import { parseChangelog } from "../../../../../changelog-parser";
 import { CHANGELOG_ENTRIES } from "./changelog-preview";
 import {
-  releaseHighlights,
+  releaseSummary,
   resolveReleasePreview,
   resolveReleaseUpdateVersion,
 } from "./release-notes-model";
@@ -189,20 +189,13 @@ const SAMPLE = parseChangelog(`# Changelog
 
 ## 0.48.0
 
-A lede.
+A lede with \`code\`.
+
+A second paragraph.
 
 ### Highlights
 
 - **First highlight:** with a description.
-- **Second.** with a period.
-- **Third** without punctuation.
-- A plain line without a bold title.
-- **Fourth:** shown.
-- **Fifth:** dropped, only four show.
-
-### Fixes
-
-- **Not a highlight:** ignored.
 
 ## 0.47.1
 
@@ -211,32 +204,18 @@ A lede.
 - Fixed something.
 `);
 
-const SAMPLE_HIGHLIGHTS = [
-  { title: "First highlight", description: "With a description." },
-  { title: "Second", description: "With a period." },
-  { title: "Third", description: "Without punctuation." },
-  { title: "Fourth", description: "Shown." },
-];
-
-describe("releaseHighlights", () => {
-  it("returns up to four bold titles and the text after them", () => {
-    expect(releaseHighlights(SAMPLE[0]!)).toEqual(SAMPLE_HIGHLIGHTS);
+describe("releaseSummary", () => {
+  it("returns the first paragraph before the release's sections", () => {
+    expect(releaseSummary(SAMPLE[0]!)).toBe("A lede with `code`.");
   });
 
-  it("returns nothing when a release has no Highlights section", () => {
-    expect(releaseHighlights(SAMPLE[1]!)).toEqual([]);
+  it("returns null when a release has no lede", () => {
+    expect(releaseSummary(SAMPLE[1]!)).toBeNull();
   });
 
   it("reads the repo's own newest release", () => {
     const [latest] = CHANGELOG_ENTRIES;
-    expect(latest).toBeDefined();
-    const highlights = releaseHighlights(latest!);
-    expect(highlights.length).toBeGreaterThan(0);
-    expect(highlights.length).toBeLessThanOrEqual(4);
-    for (const highlight of highlights) {
-      expect(highlight.title).not.toMatch(/[*:]/);
-      expect(highlight.description).not.toMatch(/^[\s:]/);
-    }
+    expect(releaseSummary(latest!)).toMatch(/\S/);
   });
 });
 
@@ -245,20 +224,16 @@ describe("resolveReleasePreview", () => {
     const bundled = parseChangelog(`## 0.48.0
 
 Bundled lede.
-
-### Highlights
-
-- **Bundled:** older copy.
 `);
     expect(resolveReleasePreview("0.48.0", SAMPLE, bundled)).toEqual({
-      highlights: SAMPLE_HIGHLIGHTS,
+      summary: "A lede with `code`.",
     });
     expect(resolveReleasePreview("0.48.0", undefined, bundled)).toEqual({
-      highlights: [{ title: "Bundled", description: "Older copy." }],
+      summary: "Bundled lede.",
     });
   });
 
-  it("is null when the release is missing or has no highlights", () => {
+  it("is null when the release is missing or has no lede", () => {
     expect(resolveReleasePreview("0.49.0", SAMPLE, [])).toBeNull();
     expect(resolveReleasePreview("0.47.1", SAMPLE, [])).toBeNull();
   });

@@ -5,10 +5,7 @@ import type {
 } from "@bb/server-contract";
 import type { ChangelogEntry } from "../../../../../changelog-parser";
 
-export const RELEASE_PREVIEW_MAX_HIGHLIGHTS = 4;
-
 const RELEASE_VERSION_PATTERN = /^\d+(?:\.\d+){1,3}$/;
-const BOLD_TITLE_PATTERN = /^\*\*(.+?)\*\*/;
 
 export function isReleaseVersion(version: string): boolean {
   return RELEASE_VERSION_PATTERN.test(version);
@@ -78,55 +75,17 @@ export function resolveReleaseUpdateVersion({
   return candidate;
 }
 
-export interface ReleaseHighlight {
-  title: string;
-  description: string;
-}
-
-function highlightFromItem(item: string): ReleaseHighlight | null {
-  const trimmed = item.trim();
-  const match = BOLD_TITLE_PATTERN.exec(trimmed);
-  const title = match?.[1]
-    ?.trim()
-    .replace(/[:.]+$/, "")
-    .trim();
-  if (match === null || title === undefined || title === "") {
-    return null;
-  }
-  const description = trimmed
-    .slice(match[0].length)
-    .replace(/^[:.]/, "")
-    .trim();
-  return {
-    title,
-    description: description.charAt(0).toUpperCase() + description.slice(1),
-  };
-}
-
-export function releaseHighlights(entry: ChangelogEntry): ReleaseHighlight[] {
-  const section = entry.sections.find(
-    (candidate) => candidate.title.trim().toLowerCase() === "highlights",
-  );
-  if (section === undefined) {
-    return [];
-  }
-  const highlights: ReleaseHighlight[] = [];
-  for (const block of section.blocks) {
-    if (block.kind !== "list") {
-      continue;
-    }
-    for (const item of block.items) {
-      const highlight = highlightFromItem(item);
-      if (highlight !== null) {
-        highlights.push(highlight);
-      }
-    }
-  }
-  return highlights.slice(0, RELEASE_PREVIEW_MAX_HIGHLIGHTS);
-}
-
 export interface ReleasePreview {
-  highlights: ReleaseHighlight[];
+  summary: string;
+}
+
+export function releaseSummary(entry: ChangelogEntry): string | null {
+  for (const block of entry.lede) {
+    if (block.kind === "paragraph" && block.text.trim() !== "") {
+      return block.text.trim();
+    }
+  }
+  return null;
 }
 
 export function resolveReleasePreview(
@@ -140,9 +99,6 @@ export function resolveReleasePreview(
   if (entry === undefined) {
     return null;
   }
-  const highlights = releaseHighlights(entry);
-  if (highlights.length === 0) {
-    return null;
-  }
-  return { highlights };
+  const summary = releaseSummary(entry);
+  return summary === null ? null : { summary };
 }

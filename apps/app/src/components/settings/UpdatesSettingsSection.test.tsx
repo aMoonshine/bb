@@ -498,18 +498,13 @@ describe("UpdatesSettingsSection", () => {
       );
     });
 
-    it("previews the target release's highlights under the bb row", () => {
+    it("summarizes the target release under the bb row", () => {
       renderSection();
 
       const preview = releaseNotesPreview();
-      expect(preview).not.toBeNull();
-      expect(
-        within(preview!).getByRole("heading", { name: "What's in bb 0.47.0" }),
-      ).toBeDefined();
-      expect(
-        within(preview!).getByText("Customizable sidebar navigation"),
-      ).toBeDefined();
-      expect(within(preview!).getAllByRole("listitem")).toHaveLength(4);
+      expect(preview?.textContent).toMatch(
+        /^What's in bb 0\.47\.0: Customizable sidebar navigation, /,
+      );
       expect(recordTelemetryEvent).toHaveBeenCalledExactlyOnceWith({
         name: "release_notes_preview_shown",
         properties: { release_version: "0.47.0", update_available: true },
@@ -533,14 +528,9 @@ describe("UpdatesSettingsSection", () => {
       );
       renderSection();
 
-      const preview = releaseNotesPreview();
-      expect(
-        within(preview!).getByRole("heading", {
-          name: "What's new in bb 0.46.0",
-        }),
-      ).toBeDefined();
-      expect(within(preview!).getByText("Navigation rail")).toBeDefined();
-      expect(within(preview!).queryByRole("img")).toBeNull();
+      expect(releaseNotesPreview()?.textContent).toBe(
+        "What's new in bb 0.46.0: A new navigation rail, better thread search, reusable prompts, and more control over notifications and storage.",
+      );
       expect(recordTelemetryEvent).toHaveBeenCalledExactlyOnceWith({
         name: "release_notes_preview_shown",
         properties: { release_version: "0.46.0", update_available: false },
@@ -555,17 +545,17 @@ describe("UpdatesSettingsSection", () => {
 
 ## 0.47.0
 
-### Highlights
-
-- **Published highlight:** from the live changelog.
+The published summary.
 `),
         ),
       );
       renderSection();
 
-      expect(await screen.findByText("Published highlight")).toBeDefined();
-      expect(screen.getByText("From the live changelog.")).toBeDefined();
-      expect(screen.queryByText("Customizable sidebar navigation")).toBeNull();
+      await waitFor(() =>
+        expect(releaseNotesPreview()?.textContent).toBe(
+          "What's in bb 0.47.0: The published summary.",
+        ),
+      );
     });
 
     it("shows no preview for a release missing from the changelog", () => {

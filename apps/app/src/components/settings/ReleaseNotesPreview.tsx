@@ -1,4 +1,4 @@
-import { useEffect, useId } from "react";
+import { useEffect } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { useQuery } from "@tanstack/react-query";
 import { recordTelemetryEvent } from "@/components/onboarding/onboarding-telemetry";
@@ -18,7 +18,7 @@ export function resetReleaseNotesPreviewSessionForTest(): void {
   reportedPreviewVersions.clear();
 }
 
-const DESCRIPTION_COMPONENTS: Components = {
+const SUMMARY_COMPONENTS: Components = {
   p: ({ children }) => <>{children}</>,
   img: () => null,
   a: ({ children, href }) => (
@@ -102,37 +102,19 @@ export function ReleaseNotesPreviewContent({
   preview: ReleasePreview;
   updateAvailable: boolean;
 }) {
-  const headingId = useId();
   return (
-    <section
-      aria-labelledby={headingId}
+    <p
       data-updates-domain="release-notes"
-      className="flex min-w-0 flex-col gap-2 px-4 py-3"
+      className="line-clamp-2 px-4 py-2.5 pl-13 text-xs leading-snug text-muted-foreground"
     >
-      <h3 id={headingId} className="text-xs font-medium text-muted-foreground">
+      <span className="font-medium text-foreground">
         {updateAvailable
-          ? `What's in bb ${version}`
-          : `What's new in bb ${version}`}
-      </h3>
-      <ul className="flex min-w-0 flex-col gap-1">
-        {preview.highlights.map((highlight) => (
-          <li
-            key={highlight.title}
-            className="flex min-w-0 items-baseline gap-2 text-sm"
-          >
-            <span className="max-w-full shrink-0 truncate font-medium text-foreground">
-              {highlight.title}
-            </span>
-            {highlight.description === "" ? null : (
-              <span className="min-w-0 truncate text-xs text-muted-foreground">
-                <ReactMarkdown components={DESCRIPTION_COMPONENTS} skipHtml>
-                  {highlight.description}
-                </ReactMarkdown>
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
+          ? `What's in bb ${version}: `
+          : `What's new in bb ${version}: `}
+      </span>
+      <ReactMarkdown components={SUMMARY_COMPONENTS} skipHtml>
+        {preview.summary}
+      </ReactMarkdown>
+    </p>
   );
 }
