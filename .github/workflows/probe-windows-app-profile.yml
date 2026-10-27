@@ -1,0 +1,47 @@
+name: Profile Windows app test shard
+on:
+  push:
+    branches: [bb/probe-windows-app-profile]
+permissions:
+  contents: read
+jobs:
+  profile:
+    runs-on: blacksmith-4vcpu-windows-2025
+    timeout-minutes: 20
+    env:
+      VITEST_MAX_WORKERS: '4'
+      BB_CI_TEST_SHARD: '4/4'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.x
+          package-manager-cache: false
+      - run: npm install --global pnpm@9.15.0 --ignore-scripts
+      - uses: ./.github/actions/windows-dependency-cache
+        timeout-minutes: 1
+        continue-on-error: true
+      - name: Install dependencies
+        shell: bash
+        run: bash .github/actions/setup-workspace/install-dependencies.sh --ignore-scripts --filter bb --filter '@bb/app...' --filter '@bb/db...'
+      - name: Warm the unchanged app shard and prerequisites
+        shell: cmd
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        run: |
+          mkdir "%RUNNER_TEMP%\app-profile"
+          pnpm exec turbo run test --filter=@bb/app --continue --concurrency=2 --output-logs=full > "%RUNNER_TEMP%\app-profile\warmup.log" 2>&1
+      - name: Profile the unchanged app shard
+        shell: cmd
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        run: |
+          if exist apps\app\node_modules\.vite\vitest rmdir /s /q apps\app\node_modules\.vite\vitest
+          pnpm exec turbo run test --filter=@bb/app --only --force --continue --concurrency=2 --output-logs=full -- --execArgv=--cpu-prof --execArgv=--cpu-prof-dir=%RUNNER_TEMP%/app-profile > "%RUNNER_TEMP%\app-profile\profile.log" 2>&1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: windows-app-profile
+          path: ${{ runner.temp }}/app-profile/
