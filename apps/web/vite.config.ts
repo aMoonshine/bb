@@ -1,4 +1,6 @@
 import { fileURLToPath } from "node:url";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { defineConfig } from "vite";
 import {
   cloudflare,
@@ -46,6 +48,27 @@ export default defineConfig(({ command }) => {
       allowedHosts: [".localhost", ".ts.net"],
     },
     plugins: [
+      {
+        name: "ssr-static-assets",
+        async writeBundle(_options, bundle) {
+          if (this.environment.name !== "ssr") return;
+          const clientDir = fileURLToPath(
+            new URL("./dist/client", import.meta.url),
+          );
+          await Promise.all(
+            Object.values(bundle).map(async (output) => {
+              if (
+                output.type !== "asset" ||
+                !output.fileName.startsWith("assets/")
+              )
+                return;
+              const path = resolve(clientDir, output.fileName);
+              await mkdir(dirname(path), { recursive: true });
+              await writeFile(path, output.source);
+            }),
+          );
+        },
+      },
       cloudflare(cloudflareConfig),
       tailwindcss(),
       tanstackStart({
