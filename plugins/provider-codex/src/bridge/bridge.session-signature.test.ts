@@ -143,7 +143,11 @@ it("clears Fast for the next turn without replacing the session", async () => {
       options: { ...FULL_ACCESS_SESSION_OPTIONS, serviceTier },
     });
     expect((await harness.waitForResponse(id)).error).toBeUndefined();
-    expect(recordedRequests().at(-1)).toEqual({
+    expect(
+      recordedRequests()
+        .filter((request) => request.method === "turn/start")
+        .at(-1),
+    ).toEqual({
       method: "turn/start",
       params: expect.objectContaining({
         serviceTier: serviceTier === "default" ? null : "fast",

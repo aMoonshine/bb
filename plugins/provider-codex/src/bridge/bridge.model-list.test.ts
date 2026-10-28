@@ -208,6 +208,37 @@ it.each([
     })),
     selectedOnlyModels: [],
   });
+
+  harness.sendRequest(2, "thread/start", {
+    threadId: "thr_catalog_defaults",
+    cwd: workDir,
+    instructionMode: "append",
+    options: FULL_ACCESS_SESSION_OPTIONS,
+  });
+  expect((await harness.waitForResponse(2)).error).toBeUndefined();
+  await vi.waitFor(() => {
+    expect(harness.messages).toContainEqual(
+      expect.objectContaining({
+        method: "thread/delta",
+        params: expect.objectContaining({
+          deltas: expect.arrayContaining([
+            expect.objectContaining({
+              kind: "extension.state",
+              extensionKind: "bb/provider-model-catalog",
+              payload: expect.objectContaining({
+                models: catalog.map((model, index) =>
+                  expect.objectContaining({
+                    model: model.model,
+                    isDefault: scenario.expectedDefaults[index],
+                  }),
+                ),
+              }),
+            }),
+          ]),
+        }),
+      }),
+    );
+  });
 });
 
 it("recovers with a fresh app-server after a model catalog failure", async () => {

@@ -1025,18 +1025,42 @@ const codexThreadIdentityResultSchema = z
 const SESSION_OPTIONS_STATE_KIND = "bb/session-options";
 const SESSION_MODEL_CATALOG_TIMEOUT_MS = 10_000;
 
+async function loadModelCatalog(
+  connection: CodexAppServerConnection,
+  timeoutMs: number,
+): Promise<CodexModelCatalog> {
+  const result = await connection.request({
+    method: "model/list",
+    params: {},
+    resultSchema: ignoredChildResultSchema,
+    timeoutMs,
+  });
+  const catalog = parseModelCatalog(result);
+  const configuredModel = await connection
+    .request({
+      method: "config/read",
+      params: {},
+      resultSchema: z.object({
+        config: z.object({ model: z.string().nullish() }),
+      }),
+      timeoutMs,
+    })
+    .then((configResult) => configResult.config.model)
+    .catch(() => null);
+  if (catalog.models.some((model) => model.model === configuredModel)) {
+    for (const model of catalog.models) {
+      model.isDefault = model.model === configuredModel;
+    }
+  }
+  return catalog;
+}
+
 function loadSessionModelCatalog(
   connection: CodexAppServerConnection,
 ): Promise<CodexModelCatalog | null> {
-  return connection
-    .request({
-      method: "model/list",
-      params: {},
-      resultSchema: ignoredChildResultSchema,
-      timeoutMs: SESSION_MODEL_CATALOG_TIMEOUT_MS,
-    })
-    .then(parseModelCatalog)
-    .catch(() => null);
+  return loadModelCatalog(connection, SESSION_MODEL_CATALOG_TIMEOUT_MS).catch(
+    () => null,
+  );
 }
 
 function publishDaybreakState(
@@ -1565,29 +1589,10 @@ async function handleModelList(
 ): Promise<void> {
   try {
     await withMaintenanceChild(async (connection) => {
-      const result = await connection.request({
-        method: "model/list",
-        params: {},
-        resultSchema: ignoredChildResultSchema,
-        timeoutMs: CHILD_REQUEST_TIMEOUT_MS,
-      });
-      const { models, selectedOnlyModels } = parseModelCatalog(result);
-      const configuredModel = await connection
-        .request({
-          method: "config/read",
-          params: {},
-          resultSchema: z.object({
-            config: z.object({ model: z.string().nullish() }),
-          }),
-          timeoutMs: CHILD_REQUEST_TIMEOUT_MS,
-        })
-        .then((configResult) => configResult.config.model)
-        .catch(() => null);
-      if (models.some((model) => model.model === configuredModel)) {
-        for (const model of models) {
-          model.isDefault = model.model === configuredModel;
-        }
-      }
+      const { models, selectedOnlyModels } = await loadModelCatalog(
+        connection,
+        CHILD_REQUEST_TIMEOUT_MS,
+      );
       sendResult(id, {
         models,
         selectedOnlyModels,
