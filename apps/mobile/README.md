@@ -110,7 +110,8 @@ e2e/subflows/            shared steps (launch-app.yaml: cold start through the
 e2e/scripts/             ci-run-flows.sh (the CI flow set against a Release
                          build; see "CI"), connect-stub-control.js (drives the
                          bb connect stub), pick-simulator.mjs (newest iPhone
-                         17 Pro/17/16 Pro runtime)
+                         17 Pro/17/16 Pro runtime, or the named
+                         devices only)
 eas.json                 EAS Build profiles (development / development-device /
                          preview / production); see "Release"
 scripts/                 generate-native-theme.ts (theme tokens),
@@ -365,16 +366,16 @@ as the first argument drives a dev client through Metro instead.
   (`pnpm exec turbo run build typecheck lint` in `Checks`, the `packages`
   test shard for `vitest`), like every workspace package.
 - `.github/workflows/mobile-e2e.yml` (`Mobile E2E`) runs the flows above on
-  the `blacksmith-6vcpu-macos-15` runner: label a pull request `mobile-e2e`,
+  the `blacksmith-6vcpu-macos-27` runner: label a pull request `mobile-e2e`,
   dispatch it by hand (optional `flows` input), or wait for the nightly run.
-  It selects Xcode 27.1 (`DEVELOPER_DIR`, falling back to the newest 27.x, then 26.x),
-  boots the simulator `pick-simulator.mjs` chooses, installs Maestro 2.8.0
+  It selects Xcode 27.1 (`DEVELOPER_DIR`; the job fails without it), boots the
+  iPhone Duo simulator (`pick-simulator.mjs "iPhone Duo"`), installs Maestro 2.8.0
   (Java 17 from `actions/setup-java` only when the image has no JDK 17+),
   restores `ios/Pods` + `Podfile.lock` and (behind the workflow's
   `CACHE_DERIVED_DATA` knob — DerivedData is ~7 GB raw and the Actions cache
   quota is shared with the Turbo caches) the Xcode DerivedData `Build/`
   directory from `actions/cache` keyed on `pnpm-lock.yaml` + `app.json` +
-  `package.json` + `patches/**`, prebuilds, builds the Release app onto the
+  `package.json` + `patches/**` and the Xcode build, prebuilds, builds the Release app onto the
   simulator, starts the harness backend (`turbo run e2e:mobile-backend`,
   waits for `/health`), runs `ci-run-flows.sh`, and uploads
   `e2e-artifacts/` (per-flow Maestro output, backend log, simulator log).

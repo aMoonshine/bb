@@ -3,14 +3,16 @@
 // iOS runtime that has one of the preferred device types, preferring the
 // models the flows were developed on. Reads `xcrun simctl list devices
 // available -j`. Usage: node pick-simulator.mjs [preferred name ...]
+// Named devices are required: when none of them is available it exits
+// non-zero instead of falling back to another iPhone.
 //
 //   UDID=$(node e2e/scripts/pick-simulator.mjs)
 import { execFileSync } from "node:child_process";
 
-const preferred =
-  process.argv.length > 2
-    ? process.argv.slice(2)
-    : ["iPhone 17 Pro", "iPhone 17", "iPhone 16 Pro", "iPhone 16"];
+const required = process.argv.length > 2;
+const preferred = required
+  ? process.argv.slice(2)
+  : ["iPhone 17 Pro", "iPhone 17", "iPhone 16 Pro", "iPhone 16"];
 
 const listing = JSON.parse(
   execFileSync("xcrun", ["simctl", "list", "devices", "available", "-j"], {
@@ -46,7 +48,7 @@ for (const name of preferred) {
   }
   if (pick) break;
 }
-if (!pick) {
+if (!pick && !required) {
   for (const runtime of runtimes) {
     const device = runtime.devices.find(
       (candidate) =>
@@ -59,7 +61,11 @@ if (!pick) {
   }
 }
 if (!pick) {
-  console.error("No available iPhone simulator found");
+  console.error(
+    required
+      ? `No available simulator named ${preferred.join(", ")}`
+      : "No available iPhone simulator found",
+  );
   process.exit(1);
 }
 console.error(
