@@ -64,21 +64,21 @@ export function PushNotificationsHost() {
         hasThread: hasThreadOnServer,
       });
       if (!profile) {
-        toast.error("Could not open the thread", {
-          description: "None of your saved servers has it.",
-        });
+        if (target.threadId === null) {
+          toast.error("Could not open bb", {
+            description: "None of your saved servers sent this notification.",
+          });
+        } else {
+          toast.error("Could not open the thread", {
+            description: "None of your saved servers has it.",
+          });
+        }
         return;
       }
       router.push(
         webViewShellHref({
           profileId: profile.id,
-          path:
-            target.projectId === null
-              ? `/threads/${target.threadId}`
-              : getThreadRoutePath({
-                  projectId: target.projectId,
-                  threadId: target.threadId,
-                }),
+          path: pushTargetPath(target),
         }),
       );
     },
@@ -150,6 +150,15 @@ export function PushNotificationsHost() {
       />
     </>
   );
+}
+
+function pushTargetPath(target: PushNotificationTarget): string {
+  if (target.threadId === null) return "/";
+  if (target.projectId === null) return `/threads/${target.threadId}`;
+  return getThreadRoutePath({
+    projectId: target.projectId,
+    threadId: target.threadId,
+  });
 }
 
 function FirstRunPrompt({

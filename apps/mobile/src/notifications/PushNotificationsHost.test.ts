@@ -146,4 +146,25 @@ describe("PushNotificationsHost", () => {
       }),
     );
   });
+
+  it("opens the sending server's home screen for a threadless push", async () => {
+    mocks.responseListener({
+      notification: {
+        request: {
+          content: {
+            data: {
+              kind: "message",
+              serverUrl: "https://bb.example.test",
+            },
+          },
+        },
+      },
+    });
+    await vi.waitFor(() =>
+      expect(mocks.push).toHaveBeenCalledWith({
+        pathname: "/webview",
+        params: { path: "/", profileId: "profile-1" },
+      }),
+    );
+  });
 });
