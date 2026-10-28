@@ -95,7 +95,7 @@ it.skipIf(process.platform === "win32")(
     });
     const command = managedPiInstallCommand("@earendil-works/pi-coding-agent");
     await rm(managedPiExecutable());
-  await promisify(execFile)(command.command, command.args);
+    await promisify(execFile)(command.command, command.args);
     const result = await promisify(execFile)(
       managedPiExecutable(),
       ["--version", "with spaces"],
