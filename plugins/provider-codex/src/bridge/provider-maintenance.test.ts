@@ -233,6 +233,11 @@ describe("Codex credential health and usage", () => {
   );
 
   it("reports unauthenticated when auth.json is missing", async () => {
+    const executable = path.join(
+      homeDir,
+      "bin",
+      process.platform === "win32" ? "codex.CMD" : "codex",
+    );
     await expect(getCodexProviderHealth()).resolves.toEqual({
       supported: true,
       health: {
@@ -244,8 +249,8 @@ describe("Codex credential health and usage", () => {
         minimumSupportedVersion: "0.136.0",
         canInstall: true,
         canUpdate: true,
-        loginCommand: "codex login --device-auth",
-        localLoginCommand: "codex login",
+        loginCommand: codexLoginCommand(executable, ["login", "--device-auth"]),
+        localLoginCommand: codexLoginCommand(executable, ["login"]),
       },
     });
     await expect(getCodexProviderUsage()).resolves.toEqual({
