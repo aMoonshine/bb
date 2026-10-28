@@ -78,9 +78,6 @@ function Survey({
           {question.name === "love" && (
             <h2 className="community-section">Your experience with bb</h2>
           )}
-          {question.name === "city" && (
-            <h2 className="community-section">bb meetups</h2>
-          )}
           {question.name === "community" && (
             <h2 className="community-section">
               What you'd like from the bb community

@@ -36,7 +36,8 @@ describe("survey page", () => {
       expect(html.indexOf("Getting to know you")).toBeLessThan(
         html.indexOf('data-question="discovery"'),
       );
-      expect(html.indexOf("bb meetups")).toBeLessThan(
+      expect(html).not.toContain(">bb meetups<");
+      expect(html.indexOf('data-question="community"')).toBeLessThan(
         html.indexOf("We&#x27;re starting bb meetups"),
       );
       expect(
