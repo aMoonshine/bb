@@ -1,0 +1,49 @@
+name: Measure Windows desktop packaging phases
+on:
+  push:
+    branches: [bb/probe-desktop-packaging-timings]
+permissions:
+  contents: read
+jobs:
+  measure:
+    runs-on: blacksmith-4vcpu-windows-2025
+    timeout-minutes: 25
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.x
+          package-manager-cache: false
+      - run: npm install --global pnpm@9.15.0 --ignore-scripts
+      - uses: ./.github/actions/windows-dependency-cache
+        timeout-minutes: 1
+        continue-on-error: true
+      - uses: ./.github/actions/cache-react-compiler
+        timeout-minutes: 1
+        continue-on-error: true
+      - name: Install dependencies
+        shell: bash
+        run: bash .github/actions/setup-workspace/install-dependencies.sh --ignore-scripts --filter '!@bb/mobile'
+      - name: Instrument packaging phase timings
+        run: node .github/scripts/instrument-desktop-timings.mjs
+      - name: Package with cold build outputs
+        shell: cmd
+        run: |
+          mkdir "%RUNNER_TEMP%\desktop-timings"
+          pnpm exec turbo run package:win --filter=@bb/desktop --output-logs=full --log-order=stream --summarize > "%RUNNER_TEMP%\desktop-timings\cold.log" 2>&1
+      - name: Smoke the cold package
+        run: pnpm exec turbo run smoke:packaged --filter=@bb/desktop --force --output-logs=full --log-order=stream
+      - name: Package with warm build outputs
+        shell: cmd
+        run: pnpm exec turbo run package:win --filter=@bb/desktop --output-logs=full --log-order=stream --summarize > "%RUNNER_TEMP%\desktop-timings\warm.log" 2>&1
+      - name: Smoke the warm package
+        run: pnpm exec turbo run smoke:packaged --filter=@bb/desktop --force --output-logs=full --log-order=stream
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: desktop-packaging-timings
+          path: |
+            ${{ runner.temp }}/desktop-timings/
+            .turbo/runs/
