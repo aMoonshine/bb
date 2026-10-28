@@ -106,6 +106,21 @@ jobs:
           fi
           pod --version
 
+      # The macos-27 image ships Xcode 27.1 with only the iOS 27.0 simulator
+      # runtime, which has no iPhone Duo. Download the 27.1 runtime when it is
+      # missing and create the device when the runtime brings none.
+      - name: Install the iPhone Duo simulator
+        run: |
+          set -x
+          if ! xcrun simctl list runtimes | grep -q 'SimRuntime.iOS-27-1'; then
+            time xcodebuild -downloadPlatform iOS -buildVersion 27.1
+          fi
+          if ! xcrun simctl list devices available 'iOS 27.1' | grep -q 'iPhone Duo'; then
+            devicetype=$(xcrun simctl list devicetypes -j | node -e 'const types = JSON.parse(require("fs").readFileSync(0, "utf8")).devicetypes; const duo = types.find((type) => type.name === "iPhone Duo"); if (!duo) { console.error("Xcode has no iPhone Duo device type"); process.exit(1); } console.log(duo.identifier);')
+            xcrun simctl create "iPhone Duo" "$devicetype" com.apple.CoreSimulator.SimRuntime.iOS-27-1
+          fi
+          xcrun simctl list devices available 'iOS 27.1'
+
       - name: Pick and boot a simulator
         id: simulator
         run: |

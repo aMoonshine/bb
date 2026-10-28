@@ -368,7 +368,8 @@ as the first argument drives a dev client through Metro instead.
 - `.github/workflows/mobile-e2e.yml` (`Mobile E2E`) runs the flows above on
   the `blacksmith-6vcpu-macos-27` runner: label a pull request `mobile-e2e`,
   dispatch it by hand (optional `flows` input), or wait for the nightly run.
-  It selects Xcode 27.1 (`DEVELOPER_DIR`; the job fails without it), boots the
+  It selects Xcode 27.1 (`DEVELOPER_DIR`; the job fails without it), downloads
+  the iOS 27.1 simulator runtime when the image lacks it, boots the
   iPhone Duo simulator (`pick-simulator.mjs "iPhone Duo"`), installs Maestro 2.8.0
   (Java 17 from `actions/setup-java` only when the image has no JDK 17+),
   restores `ios/Pods` + `Podfile.lock` and (behind the workflow's
