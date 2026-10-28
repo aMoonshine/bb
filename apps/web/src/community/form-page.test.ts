@@ -4,6 +4,28 @@ import { formPage } from "./form-page";
 import { surveyQuestions } from "./survey";
 
 describe("survey page", () => {
+  it.each(["survey", "merch"] as const)(
+    "loads shared chrome with the response nonce on %s pages",
+    async (kind) => {
+      const response = formPage({ kind, id: "fixture" });
+      const html = await response.text();
+      const policy = response.headers.get("content-security-policy")!;
+      const nonce = policy.match(/script-src 'nonce-([^']+)'/)![1];
+      expect(html).toContain('id="site-nav"><nav class="nav"');
+      expect(html).toContain('id="site-footer"><footer class="footer"');
+      expect(html).toMatch(
+        new RegExp(
+          `<script nonce="${nonce}" src="[^"]+site-chrome[^"]*" defer=""></script>`,
+        ),
+      );
+      expect(html).not.toContain("community-header");
+      expect(html).not.toContain("community-footer");
+      expect(policy).toContain("connect-src 'none'");
+      expect(policy).not.toContain("unsafe-inline");
+      expect(response.headers.get("cache-control")).toBe("no-store");
+    },
+  );
+
   it("groups the questions, asks only for email, and fixes Other last while shuffling Q6", async () => {
     vi.stubGlobal(
       "Math",

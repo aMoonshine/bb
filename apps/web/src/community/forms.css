@@ -7,23 +7,11 @@
   padding: 0 28px;
   margin: 0 auto;
 }
-.community-header {
-  min-height: 104px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border-soft);
-}
-.community-header > span,
 .community-eyebrow,
 .community-help,
-.community-optional,
-.community-footer {
+.community-optional {
   color: var(--dim);
   font-size: 0.875rem;
-}
-.community-header .logo {
-  display: block;
 }
 .community-intro {
   padding: 64px 0 8px;
@@ -199,15 +187,6 @@
 .community-submit > p {
   text-align: center;
 }
-.community-footer {
-  padding: 32px 0;
-  margin-top: 48px;
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  border-top: 1px solid var(--border-soft);
-}
-.community-footer a,
 .community-thanks a {
   color: inherit;
   text-underline-offset: 3px;
@@ -218,13 +197,7 @@
 }
 @media (max-width: 600px) {
   .community-wrap {
-    padding: 0 20px;
-  }
-  .community-header {
-    min-height: 80px;
-  }
-  .community-header > span {
-    font-size: 0.75rem;
+    padding: 0;
   }
   .community-intro {
     padding-top: 40px;

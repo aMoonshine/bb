@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vite dev --host 0.0.0.0",
+    "generate:site-chrome": "node scripts/build-site-chrome.mjs",
     "build": "vite build",
     "og:card": "node scripts/generate-og-card.mjs",
     "deploy": "wrangler deploy",

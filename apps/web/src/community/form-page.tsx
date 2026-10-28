@@ -1,6 +1,8 @@
 import { Fragment } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToString } from "react-dom/server";
 import { siteHeadLinks } from "../landing/page-head";
+import { SiteNav, SiteFooter } from "../landing/site-chrome";
+import siteChromeScript from "../generated/site-chrome.js?url";
 import { THEME_INIT } from "../lib/theme";
 import css from "./forms.css?url";
 import {
@@ -244,7 +246,7 @@ export function formPage({
   const nonce = crypto.randomUUID();
   const referrerPolicy = kind === "survey" ? "same-origin" : "no-referrer";
   const title = kind === "survey" ? SURVEY_TITLE : "thank you 🧡";
-  const html = renderToStaticMarkup(
+  const html = renderToString(
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
@@ -262,13 +264,11 @@ export function formPage({
         />
       </head>
       <body className="community-page">
-        <div className="community-wrap">
-          <header className="community-header">
-            <a className="logo" href="/" aria-label="bb home">
-              <span className="bb-mark logo-mark" />
-            </a>
-          </header>
-          <main>
+        <div className="wrap">
+          <div id="site-nav">
+            <SiteNav />
+          </div>
+          <main className="community-wrap">
             {complete ? (
               <section className="community-thanks">
                 {duplicate ? (
@@ -324,8 +324,7 @@ export function formPage({
                     <h1 aria-label={title}>
                       Help shape the future of{" "}
                       <span className="community-nowrap">
-                        <span className="community-heading-mark" aria-hidden />
-                        !
+                        <span className="community-heading-mark" aria-hidden />!
                       </span>
                     </h1>
                   ) : (
@@ -407,10 +406,11 @@ export function formPage({
               </>
             )}
           </main>
-          <footer className="community-footer">
-            <a href="/privacy">Privacy</a>
-          </footer>
+          <div id="site-footer">
+            <SiteFooter />
+          </div>
         </div>
+        <script nonce={nonce} src={siteChromeScript} defer />
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{ __html: FORM_SCRIPT }}

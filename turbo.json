@@ -24,8 +24,21 @@
       "dependsOn": ["topo"],
       "passThroughEnv": ["DISPLAY"]
     },
+    "@bb/web#generate:site-chrome": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/tsconfig/*.json",
+        "$TURBO_ROOT$/pnpm-lock.yaml"
+      ],
+      "outputs": ["src/generated/site-chrome.js"]
+    },
+    "@bb/web#dev": {
+      "dependsOn": ["generate:site-chrome"],
+      "cache": false,
+      "persistent": true
+    },
     "@bb/web#build": {
-      "dependsOn": ["topo"],
+      "dependsOn": ["topo", "generate:site-chrome"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/apps/server/src/generated/bb-official-marketplace/marketplace.json",
@@ -547,7 +560,7 @@
       ]
     },
     "@bb/web#typecheck": {
-      "dependsOn": ["topo"],
+      "dependsOn": ["topo", "generate:site-chrome"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/changelog-metadata.ts",
@@ -603,7 +616,7 @@
     // cannot leave this test hidden behind a stale Turbo cache entry.
     "@bb/web#test": {
       "env": ["VITEST_MAX_WORKERS"],
-      "dependsOn": ["//#ensure-native-modules", "topo"],
+      "dependsOn": ["//#ensure-native-modules", "topo", "generate:site-chrome"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/vitest*.ts",
