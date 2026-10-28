@@ -94,7 +94,8 @@ it.skipIf(process.platform === "win32")(
       versions: { ...process.versions, electron: "fixture" },
     });
     const command = managedPiInstallCommand("@earendil-works/pi-coding-agent");
-    await promisify(execFile)(command.command, command.args);
+    await rm(managedPiExecutable());
+  await promisify(execFile)(command.command, command.args);
     const result = await promisify(execFile)(
       managedPiExecutable(),
       ["--version", "with spaces"],
