@@ -12,9 +12,7 @@ import {
   makeProviderCliStatus,
 } from "../../../.ladle/story-fixtures";
 import { StoryCard, StoryRow } from "../../../.ladle/story-card";
-import { openUrlInExternalBrowser } from "@/lib/url-open-routing";
-import { getReleaseNotesUrl } from "./release-notes";
-import { ReleaseNotesPreview } from "./ReleaseNotesPreview";
+import { ReleaseNotesPanel } from "./ReleaseNotesPanel";
 import {
   BbAppUpdateRows,
   BbUpdatesCard,
@@ -28,10 +26,12 @@ export default {
 
 const noop = () => {};
 
-function storyReleaseNotes(version: string) {
+function storyReleaseNotes(version: string, expanded = false) {
   return {
     version,
-    onOpen: () => openUrlInExternalBrowser(getReleaseNotesUrl(version)),
+    panelId: `story-release-notes-${version}`,
+    expanded,
+    onToggle: noop,
   };
 }
 const NO_JOBS: ReadonlySet<string> = new Set();
@@ -358,7 +358,7 @@ export function RowVariations() {
 
         <StoryRow
           label="Update available"
-          hint="A web install cannot replace itself, so its action copies the upgrade command. Release notes opens the new version's notes, and the new version's one-sentence summary shows below the row."
+          hint="A web install cannot replace itself, so its action copies the upgrade command. Release notes opens the new version's notes, which open below the row."
         >
           <div className="w-full">
             <BbUpdatesCard>
@@ -372,10 +372,11 @@ export function RowVariations() {
                 isDesktop={false}
                 onRelaunchDesktop={null}
                 onRetryDesktop={null}
-                releaseNotes={storyReleaseNotes("0.47.0")}
-                summary={
-                  <ReleaseNotesPreview version="0.47.0" updateAvailable />
-                }
+                releaseNotes={storyReleaseNotes("0.47.0", true)}
+              />
+              <ReleaseNotesPanel
+                id="story-release-notes-0.47.0"
+                version="0.47.0"
               />
             </BbUpdatesCard>
           </div>

@@ -11,10 +11,6 @@ describe("visibleExperimentKeys", () => {
     );
   });
 
-  it("hides the retired changelog preview experiment", () => {
-    expect(visibleExperimentKeys(true)).not.toContain("changelogPreview");
-  });
-
   it("shows performance diagnostics when the server was launched with permission", () => {
     expect(visibleExperimentKeys(true)).toContain("performanceDiagnostics");
   });

@@ -1131,10 +1131,8 @@ export function PrivacySettingsSection({
   );
 }
 
-type VisibleExperimentKey = Exclude<ExperimentKey, "changelogPreview">;
-
 const EXPERIMENT_DEFINITIONS: Record<
-  VisibleExperimentKey,
+  ExperimentKey,
   { label: string; description: string }
 > = {
   compactExpiredCache: {
@@ -1163,22 +1161,14 @@ const EXPERIMENT_DEFINITIONS: Record<
       "Send an open thread's timeline changes over the live connection instead of reloading the latest window after each update.",
   },
 };
-function isVisibleExperimentKey(
-  experimentKey: ExperimentKey,
-): experimentKey is VisibleExperimentKey {
-  return experimentKey !== "changelogPreview";
-}
-
 export function visibleExperimentKeys(
   performanceDiagnosticsAvailable: boolean,
-): VisibleExperimentKey[] {
-  return experimentKeys
-    .filter(isVisibleExperimentKey)
-    .filter(
-      (experimentKey) =>
-        experimentKey !== "performanceDiagnostics" ||
-        performanceDiagnosticsAvailable,
-    );
+): ExperimentKey[] {
+  return experimentKeys.filter(
+    (experimentKey) =>
+      experimentKey !== "performanceDiagnostics" ||
+      performanceDiagnosticsAvailable,
+  );
 }
 
 const EARLY_ADOPTER_LABEL = "Early adopter";

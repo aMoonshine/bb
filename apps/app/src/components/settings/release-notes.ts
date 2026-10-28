@@ -1,25 +1,29 @@
 import { recordTelemetryEvent } from "@/components/onboarding/onboarding-telemetry";
-import { isReleaseVersion } from "./release-notes-model";
 import { openUrlInExternalBrowser } from "@/lib/url-open-routing";
+import { isReleaseVersion } from "./release-notes-model";
 
 const RELEASE_NOTES_BASE_URL = "https://getbb.app/changelog";
 
-export type ReleaseNotesEntryPoint = "updates_link";
+export type ReleaseNotesView = "inline" | "web";
 
 export function getReleaseNotesUrl(version: string): string {
   return `${RELEASE_NOTES_BASE_URL}#${version.replaceAll(".", "-")}`;
 }
 
-export function viewReleaseNotes(
+export function recordReleaseNotesOpened(
   version: string,
-  entryPoint: ReleaseNotesEntryPoint,
+  view: ReleaseNotesView,
 ): void {
-  openUrlInExternalBrowser(getReleaseNotesUrl(version));
   if (!isReleaseVersion(version)) {
     return;
   }
   recordTelemetryEvent({
     name: "release_notes_opened",
-    properties: { release_version: version, entry_point: entryPoint },
+    properties: { release_version: version, view },
   });
+}
+
+export function openReleaseNotesOnWeb(version: string): void {
+  openUrlInExternalBrowser(getReleaseNotesUrl(version));
+  recordReleaseNotesOpened(version, "web");
 }

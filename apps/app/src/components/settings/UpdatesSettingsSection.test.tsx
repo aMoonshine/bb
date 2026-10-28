@@ -45,7 +45,6 @@ import {
   UpdateActionButton,
   UpdatesSettingsSection,
 } from "./UpdatesSettingsSection";
-import { resetReleaseNotesPreviewSessionForTest } from "./ReleaseNotesPreview";
 
 vi.mock("@/components/onboarding/onboarding-telemetry", () => ({
   recordTelemetryEvent: vi.fn(),
@@ -373,7 +372,6 @@ afterEach(() => {
   window.localStorage.clear();
   resetAppUpdateCheckStoreForTests();
   resetProviderCliInstallStoreForTests();
-  resetReleaseNotesPreviewSessionForTest();
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
@@ -480,102 +478,35 @@ describe("UpdatesSettingsSection", () => {
       useUpdateInventoryMock.mockReturnValue(updateInventory());
     });
 
-    function releaseNotesLink(version: string): HTMLElement {
-      return screen.getByRole("link", {
+    function releaseNotesButton(version: string): HTMLElement {
+      return screen.getByRole("button", {
         name: `Release notes for bb ${version}`,
       });
     }
 
-    function releaseNotesPreview(): HTMLElement | null {
-      return document.querySelector('[data-updates-domain="release-notes"]');
+    function releaseNotesPanel(version: string): HTMLElement | null {
+      return screen.queryByRole("region", {
+        name: `bb ${version} release notes`,
+      });
     }
 
-    it("links the target release's notes when an update is available", () => {
+    it("offers the target release's notes when an update is available", () => {
       renderSection();
 
-      expect(releaseNotesLink("0.47.0").getAttribute("href")).toBe(
-        "https://getbb.app/changelog#0-47-0",
-      );
-    });
-
-    it("summarizes the target release under the bb row", () => {
-      renderSection();
-
-      const preview = releaseNotesPreview();
-      expect(preview?.textContent).toMatch(
-        /^What's in bb 0\.47\.0: Customizable sidebar navigation, /,
-      );
-      expect(recordTelemetryEvent).toHaveBeenCalledExactlyOnceWith({
-        name: "release_notes_preview_shown",
-        properties: { release_version: "0.47.0", update_available: true },
-      });
-    });
-
-    it("previews the installed release when no update is available", () => {
-      useUpdateInventoryMock.mockReturnValue(
-        makeInventory({
-          systemVersion: {
-            currentVersion: "0.46.0",
-            latestVersion: "0.46.0",
-            currentCommit: null,
-            installKind: "npm",
-            source: "npm",
-            updateAvailable: false,
-            isDevelopment: false,
-            upgradeCommand: "npx bb-app@latest",
-          },
-        }),
-      );
-      renderSection();
-
-      expect(releaseNotesPreview()?.textContent).toBe(
-        "What's new in bb 0.46.0: A new navigation rail, better thread search, reusable prompts, and more control over notifications and storage.",
-      );
-      expect(recordTelemetryEvent).toHaveBeenCalledExactlyOnceWith({
-        name: "release_notes_preview_shown",
-        properties: { release_version: "0.46.0", update_available: false },
-      });
-    });
-
-    it("prefers the published changelog over the bundled one", async () => {
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue(
-          new Response(`# Changelog
-
-## 0.47.0
-
-The published summary.
-`),
-        ),
-      );
-      renderSection();
-
-      await waitFor(() =>
-        expect(releaseNotesPreview()?.textContent).toBe(
-          "What's in bb 0.47.0: The published summary.",
-        ),
-      );
-    });
-
-    it("shows no preview for a release missing from the changelog", () => {
-      useUpdateInventoryMock.mockReturnValue(makeInventory({}));
-      renderSection();
-
-      expect(releaseNotesPreview()).toBeNull();
+      const button = releaseNotesButton("0.47.0");
+      expect(button.getAttribute("aria-expanded")).toBe("false");
+      expect(releaseNotesPanel("0.47.0")).toBeNull();
       expect(recordTelemetryEvent).not.toHaveBeenCalled();
     });
 
-    it("links the installed release when no update is available", () => {
+    it("offers the installed release's notes when no update is available", () => {
       useUpdateInventoryMock.mockReturnValue(makeInventory({}));
       renderSection();
 
-      expect(releaseNotesLink("0.0.5").getAttribute("href")).toBe(
-        "https://getbb.app/changelog#0-0-5",
-      );
+      expect(releaseNotesButton("0.0.5")).toBeDefined();
     });
 
-    it("hides the link for a nightly build", () => {
+    it("hides the button for a nightly build", () => {
       useUpdateInventoryMock.mockReturnValue(
         makeInventory({
           systemVersion: {
@@ -592,22 +523,91 @@ The published summary.
       );
       renderSection();
 
-      expect(screen.queryByRole("link", { name: /Release notes/ })).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: /Release notes/ }),
+      ).toBeNull();
     });
 
-    it("opens the release notes in the external browser", () => {
+    it("opens the release's notes under the bb row and closes them again", () => {
       renderSection();
 
+      fireEvent.click(releaseNotesButton("0.47.0"));
+
+      const button = releaseNotesButton("0.47.0");
+      const panel = releaseNotesPanel("0.47.0");
+      expect(button.getAttribute("aria-expanded")).toBe("true");
+      expect(button.getAttribute("aria-controls")).toBe(panel?.id);
+      expect(
+        within(panel!).getByRole("heading", { name: "Highlights" }),
+      ).toBeDefined();
+      expect(
+        within(panel!).getByText(/Customizable sidebar navigation, new and/),
+      ).toBeDefined();
+      expect(within(panel!).queryByRole("img")).toBeNull();
+      expect(screen.getByRole("region", { name: "bb" }).contains(panel)).toBe(
+        true,
+      );
+      expect(recordTelemetryEvent).toHaveBeenCalledExactlyOnceWith({
+        name: "release_notes_opened",
+        properties: { release_version: "0.47.0", view: "inline" },
+      });
+
+      fireEvent.click(button);
+      expect(releaseNotesPanel("0.47.0")).toBeNull();
+      expect(recordTelemetryEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it("opens the full release notes in the external browser", () => {
+      renderSection();
+      fireEvent.click(releaseNotesButton("0.47.0"));
       vi.mocked(recordTelemetryEvent).mockClear();
-      fireEvent.click(releaseNotesLink("0.47.0"));
+
+      const link = within(releaseNotesPanel("0.47.0")!).getByRole("link", {
+        name: /Full release notes/,
+      });
+      expect(link.getAttribute("href")).toBe(
+        "https://getbb.app/changelog#0-47-0",
+      );
+      fireEvent.click(link);
 
       expect(openUrlInExternalBrowserMock).toHaveBeenCalledExactlyOnceWith(
         "https://getbb.app/changelog#0-47-0",
       );
       expect(recordTelemetryEvent).toHaveBeenCalledExactlyOnceWith({
         name: "release_notes_opened",
-        properties: { release_version: "0.47.0", entry_point: "updates_link" },
+        properties: { release_version: "0.47.0", view: "web" },
       });
+    });
+
+    it("prefers the published changelog over the bundled one", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(`# Changelog
+
+## 0.47.0
+
+The published lede.
+`),
+        ),
+      );
+      renderSection();
+      fireEvent.click(releaseNotesButton("0.47.0"));
+
+      expect(await screen.findByText("The published lede.")).toBeDefined();
+      expect(screen.queryByRole("heading", { name: "Highlights" })).toBeNull();
+    });
+
+    it("says so when the changelog has no entry for the release", () => {
+      useUpdateInventoryMock.mockReturnValue(makeInventory({}));
+      renderSection();
+      fireEvent.click(releaseNotesButton("0.0.5"));
+
+      expect(
+        within(releaseNotesPanel("0.0.5")!).getByText(
+          "bb 0.0.5 has no release notes in the app.",
+        ),
+      ).toBeDefined();
     });
   });
 
@@ -2413,43 +2413,42 @@ The published summary.
       return bbCard;
     }
 
-    it("links the pending desktop release's notes when an update is available", async () => {
+    function notesButton(bbCard: HTMLElement, version: string): HTMLElement {
+      return within(bbCard).getByRole("button", {
+        name: `Release notes for bb ${version}`,
+      });
+    }
+
+    it("opens the pending desktop release's notes under the Desktop row", async () => {
       useSeparateDesktop({ latestVersion: "0.47.1", pendingVersion: "0.47.0" });
       const bbCard = await renderBbCard();
 
-      expect(
-        within(bbCard)
-          .getByRole("link", { name: "Release notes for bb 0.0.6" })
-          .getAttribute("href"),
-      ).toBe("https://getbb.app/changelog#0-0-6");
-      const link = within(bbCard).getByRole("link", {
-        name: "Release notes for bb 0.47.0",
+      expect(notesButton(bbCard, "0.0.6")).toBeDefined();
+      fireEvent.click(notesButton(bbCard, "0.47.0"));
+
+      const panel = within(bbCard).getByRole("region", {
+        name: "bb 0.47.0 release notes",
       });
-      expect(link.getAttribute("href")).toBe(
-        "https://getbb.app/changelog#0-47-0",
+      expect(notesButton(bbCard, "0.47.0").getAttribute("aria-controls")).toBe(
+        panel.id,
       );
-      fireEvent.click(link);
-      expect(openUrlInExternalBrowserMock).toHaveBeenCalledExactlyOnceWith(
-        "https://getbb.app/changelog#0-47-0",
+      expect(notesButton(bbCard, "0.0.6").getAttribute("aria-expanded")).toBe(
+        "false",
       );
       expect(recordTelemetryEvent).toHaveBeenCalledExactlyOnceWith({
         name: "release_notes_opened",
-        properties: { release_version: "0.47.0", entry_point: "updates_link" },
+        properties: { release_version: "0.47.0", view: "inline" },
       });
     });
 
-    it("links the latest desktop release when nothing is pending", async () => {
+    it("offers the latest desktop release when nothing is pending", async () => {
       useSeparateDesktop({});
       const bbCard = await renderBbCard();
 
-      expect(
-        within(bbCard)
-          .getByRole("link", { name: "Release notes for bb 0.47.0" })
-          .getAttribute("href"),
-      ).toBe("https://getbb.app/changelog#0-47-0");
+      expect(notesButton(bbCard, "0.47.0")).toBeDefined();
     });
 
-    it("links the installed desktop release when no update is available", async () => {
+    it("offers the installed desktop release when no update is available", async () => {
       useSeparateDesktop({
         lastCheckedAt: "2026-10-20T12:00:00.000Z",
         latestVersion: null,
@@ -2457,14 +2456,10 @@ The published summary.
       });
       const bbCard = await renderBbCard();
 
-      expect(
-        within(bbCard)
-          .getByRole("link", { name: "Release notes for bb 0.46.0" })
-          .getAttribute("href"),
-      ).toBe("https://getbb.app/changelog#0-46-0");
+      expect(notesButton(bbCard, "0.46.0")).toBeDefined();
     });
 
-    it("hides the desktop link for a nightly build", async () => {
+    it("hides the desktop button for a nightly build", async () => {
       useSeparateDesktop({
         latestVersion: "0.48.0-nightly.20261021",
         version: "0.48.0-nightly.20261020",
@@ -2473,8 +2468,8 @@ The published summary.
 
       expect(
         within(bbCard)
-          .getAllByRole("link", { name: /Release notes/ })
-          .map((link) => link.getAttribute("aria-label")),
+          .getAllByRole("button", { name: /Release notes/ })
+          .map((button) => button.getAttribute("aria-label")),
       ).toEqual(["Release notes for bb 0.0.6"]);
     });
   });

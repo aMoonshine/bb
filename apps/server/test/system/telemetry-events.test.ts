@@ -62,19 +62,16 @@ describe("client telemetry events", () => {
       harness.deps.telemetry = { ...harness.deps.telemetry, capture };
       const events = [
         {
-          name: "release_notes_preview_shown",
-          properties: { release_version: "0.47.0", update_available: true },
-        },
-        {
-          name: "release_notes_preview_shown",
-          properties: { release_version: "1.2", update_available: false },
+          name: "release_notes_opened",
+          properties: { release_version: "0.47.0", view: "inline" },
         },
         {
           name: "release_notes_opened",
-          properties: {
-            release_version: "0.47.0.1",
-            entry_point: "updates_link",
-          },
+          properties: { release_version: "0.47.0.1", view: "web" },
+        },
+        {
+          name: "release_notes_opened",
+          properties: { release_version: "1.2", view: "inline" },
         },
       ];
       for (const event of events) {
@@ -91,36 +88,31 @@ describe("client telemetry events", () => {
     await withTestHarness(async (harness) => {
       const capture = vi.fn<TelemetryService["capture"]>();
       harness.deps.telemetry = { ...harness.deps.telemetry, capture };
-      const shown = (properties: Record<string, unknown>) => ({
-        name: "release_notes_preview_shown",
-        properties: { update_available: true, ...properties },
+      const opened = (properties: Record<string, unknown>) => ({
+        name: "release_notes_opened",
+        properties: { view: "inline", ...properties },
       });
       for (const event of [
-        shown({ release_version: "0.47.0; drop" }),
-        shown({ release_version: "v0.47.0" }),
-        shown({ release_version: "0.47.0-beta.1" }),
-        shown({ release_version: `0.${"1".repeat(40)}` }),
-        shown({ release_version: "0.47.0", threadId: "thr_123" }),
-        shown({ release_version: "0.47.0", update_available: "yes" }),
-        {
-          name: "release_notes_preview_shown",
-          properties: { release_version: "0.47.0" },
-        },
-        {
-          name: "release_notes_opened",
-          properties: { release_version: "0.47.0", entry_point: "widget" },
-        },
+        opened({ release_version: "0.47.0; drop" }),
+        opened({ release_version: "v0.47.0" }),
+        opened({ release_version: "0.47.0-beta.1" }),
+        opened({ release_version: `0.${"1".repeat(40)}` }),
+        opened({ release_version: "0.47.0", threadId: "thr_123" }),
+        opened({ release_version: "0.47.0", view: "panel" }),
+        opened({
+          release_version: "0.47.0",
+          url: "https://example.com/notes",
+        }),
         {
           name: "release_notes_opened",
           properties: {
             release_version: "0.47.0",
             entry_point: "updates_link",
-            url: "https://example.com/notes",
           },
         },
         {
-          name: "release_widget_shown",
-          properties: { release_version: "0.47.0" },
+          name: "release_notes_preview_shown",
+          properties: { release_version: "0.47.0", update_available: true },
         },
       ]) {
         expect((await post(harness, event)).status).toBe(400);

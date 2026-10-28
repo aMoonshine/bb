@@ -75,30 +75,14 @@ export function resolveReleaseUpdateVersion({
   return candidate;
 }
 
-export interface ReleasePreview {
-  summary: string;
-}
-
-export function releaseSummary(entry: ChangelogEntry): string | null {
-  for (const block of entry.lede) {
-    if (block.kind === "paragraph" && block.text.trim() !== "") {
-      return block.text.trim();
-    }
-  }
-  return null;
-}
-
-export function resolveReleasePreview(
+export function findReleaseEntry(
   version: string,
   fetchedEntries: readonly ChangelogEntry[] | undefined,
   bundledEntries: readonly ChangelogEntry[],
-): ReleasePreview | null {
-  const entry =
+): ChangelogEntry | null {
+  return (
     fetchedEntries?.find((candidate) => candidate.version === version) ??
-    bundledEntries.find((candidate) => candidate.version === version);
-  if (entry === undefined) {
-    return null;
-  }
-  const summary = releaseSummary(entry);
-  return summary === null ? null : { summary };
+    bundledEntries.find((candidate) => candidate.version === version) ??
+    null
+  );
 }

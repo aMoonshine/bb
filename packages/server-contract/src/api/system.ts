@@ -305,22 +305,11 @@ export const recordTelemetryEventRequestSchema = z.discriminatedUnion("name", [
     .strict(),
   z
     .object({
-      name: z.literal("release_notes_preview_shown"),
-      properties: z
-        .object({
-          release_version: releaseVersionTelemetrySchema,
-          update_available: z.boolean(),
-        })
-        .strict(),
-    })
-    .strict(),
-  z
-    .object({
       name: z.literal("release_notes_opened"),
       properties: z
         .object({
           release_version: releaseVersionTelemetrySchema,
-          entry_point: z.enum(["updates_link"]),
+          view: z.enum(["inline", "web"]),
         })
         .strict(),
     })

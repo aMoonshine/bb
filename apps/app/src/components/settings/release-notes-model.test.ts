@@ -7,8 +7,7 @@ import type {
 import { parseChangelog } from "../../../../../changelog-parser";
 import { CHANGELOG_ENTRIES } from "./changelog-preview";
 import {
-  releaseSummary,
-  resolveReleasePreview,
+  findReleaseEntry,
   resolveReleaseUpdateVersion,
 } from "./release-notes-model";
 
@@ -185,56 +184,33 @@ describe("resolveReleaseUpdateVersion", () => {
   });
 });
 
-const SAMPLE = parseChangelog(`# Changelog
+const FETCHED = parseChangelog(`## 0.48.0
 
-## 0.48.0
-
-A lede with \`code\`.
-
-A second paragraph.
-
-### Highlights
-
-- **First highlight:** with a description.
-
-## 0.47.1
-
-### Fixes
-
-- Fixed something.
+Fetched lede.
 `);
 
-describe("releaseSummary", () => {
-  it("returns the first paragraph before the release's sections", () => {
-    expect(releaseSummary(SAMPLE[0]!)).toBe("A lede with `code`.");
-  });
-
-  it("returns null when a release has no lede", () => {
-    expect(releaseSummary(SAMPLE[1]!)).toBeNull();
-  });
-
-  it("reads the repo's own newest release", () => {
-    const [latest] = CHANGELOG_ENTRIES;
-    expect(releaseSummary(latest!)).toMatch(/\S/);
-  });
-});
-
-describe("resolveReleasePreview", () => {
+describe("findReleaseEntry", () => {
   it("prefers the fetched changelog and falls back to the bundled one", () => {
     const bundled = parseChangelog(`## 0.48.0
 
 Bundled lede.
+
+## 0.47.0
+
+Older lede.
 `);
-    expect(resolveReleasePreview("0.48.0", SAMPLE, bundled)).toEqual({
-      summary: "A lede with `code`.",
-    });
-    expect(resolveReleasePreview("0.48.0", undefined, bundled)).toEqual({
-      summary: "Bundled lede.",
-    });
+    expect(findReleaseEntry("0.48.0", FETCHED, bundled)?.lede).toEqual([
+      { kind: "paragraph", text: "Fetched lede." },
+    ]);
+    expect(findReleaseEntry("0.47.0", FETCHED, bundled)?.version).toBe(
+      "0.47.0",
+    );
+    expect(findReleaseEntry("0.48.0", undefined, bundled)?.lede).toEqual([
+      { kind: "paragraph", text: "Bundled lede." },
+    ]);
   });
 
-  it("is null when the release is missing or has no lede", () => {
-    expect(resolveReleasePreview("0.49.0", SAMPLE, [])).toBeNull();
-    expect(resolveReleasePreview("0.47.1", SAMPLE, [])).toBeNull();
+  it("is null when neither changelog has the release", () => {
+    expect(findReleaseEntry("0.49.0", FETCHED, CHANGELOG_ENTRIES)).toBeNull();
   });
 });

@@ -98,8 +98,8 @@ import {
   resolveReleaseUpdateVersion,
   type ReleaseVersionInput,
 } from "./release-notes-model";
-import { getReleaseNotesUrl, viewReleaseNotes } from "./release-notes";
-import { ReleaseNotesPreview } from "./ReleaseNotesPreview";
+import { recordReleaseNotesOpened } from "./release-notes";
+import { ReleaseNotesPanel } from "./ReleaseNotesPanel";
 
 const BULK_RETRY_THRESHOLD = 1;
 
@@ -448,30 +448,38 @@ interface BbAppUpdateRowsProps {
   onRetryDesktop: (() => void) | null;
   onShowAppUpdateResult?: ((result: SystemAppUpdateResult) => void) | null;
   isChecking?: boolean;
-  releaseNotes?: ReleaseNotesLink | null;
-  summary?: ReactNode;
+  releaseNotes?: ReleaseNotesToggle | null;
 }
 
-export interface ReleaseNotesLink {
+export interface ReleaseNotesToggle {
   version: string;
-  onOpen: () => void;
+  panelId: string;
+  expanded: boolean;
+  onToggle: () => void;
 }
 
-function ReleaseNotesLinkButton({ version, onOpen }: ReleaseNotesLink) {
+function ReleaseNotesToggleButton({
+  version,
+  panelId,
+  expanded,
+  onToggle,
+}: ReleaseNotesToggle) {
   return (
-    <a
-      href={getReleaseNotesUrl(version)}
-      target="_blank"
-      rel="noopener noreferrer"
+    <button
+      type="button"
+      aria-expanded={expanded}
+      aria-controls={expanded ? panelId : undefined}
       aria-label={`Release notes for bb ${version}`}
-      className="w-fit shrink-0 cursor-pointer rounded-sm text-2xs text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-      onClick={(event) => {
-        event.preventDefault();
-        onOpen();
-      }}
+      className="inline-flex w-fit shrink-0 cursor-pointer items-center gap-0.5 rounded-sm text-2xs text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none aria-expanded:text-foreground"
+      onClick={onToggle}
     >
       Release notes
-    </a>
+      <Icon
+        aria-hidden
+        name="ChevronDown"
+        className={cn("size-3 transition-transform", expanded && "rotate-180")}
+      />
+    </button>
   );
 }
 
@@ -489,10 +497,11 @@ export function BbAppUpdateRows({
   onShowAppUpdateResult = null,
   isChecking = false,
   releaseNotes = null,
-  summary = null,
 }: BbAppUpdateRowsProps) {
   const notesLink =
-    releaseNotes === null ? null : <ReleaseNotesLinkButton {...releaseNotes} />;
+    releaseNotes === null ? null : (
+      <ReleaseNotesToggleButton {...releaseNotes} />
+    );
   const settledStatus = isChecking ? (
     <RowStateControl live state="in-progress" />
   ) : (
@@ -527,7 +536,6 @@ export function BbAppUpdateRows({
             {description}
           </span>
         )}
-        {summary}
       </span>
     </UpdatesRow>
   );
@@ -1704,24 +1712,17 @@ function useNow(intervalMs: number): number {
   return now;
 }
 
-function resolveReleaseNotesVersion(input: ReleaseVersionInput): {
-  version: string | null;
-  updateAvailable: boolean;
-} {
+function resolveReleaseNotesVersion(input: ReleaseVersionInput): string | null {
   const target = resolveReleaseUpdateVersion(input);
   if (target !== null) {
-    return { version: target, updateAvailable: true };
+    return target;
   }
   const installed = input.isDesktop
     ? (input.desktopInfo?.version ?? null)
     : (input.appUpdate?.current.version ??
       input.systemVersion?.currentVersion ??
       null);
-  return {
-    version:
-      installed !== null && isReleaseVersion(installed) ? installed : null,
-    updateAvailable: false,
-  };
+  return installed !== null && isReleaseVersion(installed) ? installed : null;
 }
 
 function resolveDesktopReleaseNotesVersion(
@@ -1736,14 +1737,12 @@ function resolveDesktopReleaseNotesVersion(
   return version !== null && isReleaseVersion(version) ? version : null;
 }
 
-function releaseNotesLinkFor(version: string | null): ReleaseNotesLink | null {
-  return version === null
-    ? null
-    : {
-        version,
-        onOpen: () => viewReleaseNotes(version, "updates_link"),
-      };
-}
+type ReleaseNotesRow = "server" | "desktop";
+
+const RELEASE_NOTES_PANEL_IDS: Record<ReleaseNotesRow, string> = {
+  server: "updates-release-notes-server",
+  desktop: "updates-release-notes-desktop",
+};
 
 export function UpdatesSettingsSection() {
   const queryClient = useQueryClient();
@@ -1765,6 +1764,8 @@ export function UpdatesSettingsSection() {
     number | null
   >(null);
   const appUpdate = appUpdateStatus.data;
+  const [openReleaseNotes, setOpenReleaseNotes] =
+    useState<ReleaseNotesRow | null>(null);
 
   function startAppUpdate(): void {
     const runningThreadCount = appUpdate?.runningThreadCount ?? 0;
@@ -1885,10 +1886,34 @@ export function UpdatesSettingsSection() {
     appUpdate,
     systemVersion: inventory.systemVersion,
   });
-  const releaseNotes = releaseNotesLinkFor(releaseNotesVersion.version);
-  const desktopReleaseNotes = releaseNotesLinkFor(
-    resolveDesktopReleaseNotesVersion(desktopInfo),
-  );
+  const releaseNotesVersions: Record<ReleaseNotesRow, string | null> = {
+    server: releaseNotesVersion,
+    desktop: resolveDesktopReleaseNotesVersion(desktopInfo),
+  };
+  function releaseNotesToggle(row: ReleaseNotesRow): ReleaseNotesToggle | null {
+    const version = releaseNotesVersions[row];
+    if (version === null) {
+      return null;
+    }
+    const expanded = openReleaseNotes === row;
+    return {
+      version,
+      panelId: RELEASE_NOTES_PANEL_IDS[row],
+      expanded,
+      onToggle: () => {
+        setOpenReleaseNotes(expanded ? null : row);
+        if (!expanded) {
+          recordReleaseNotesOpened(version, "inline");
+        }
+      },
+    };
+  }
+  function releaseNotesPanel(row: ReleaseNotesRow): ReactNode {
+    const version = releaseNotesVersions[row];
+    return openReleaseNotes === row && version !== null ? (
+      <ReleaseNotesPanel id={RELEASE_NOTES_PANEL_IDS[row]} version={version} />
+    ) : null;
+  }
   const serverAppRow = (
     <BbAppUpdateRows
       name="Server"
@@ -1905,8 +1930,7 @@ export function UpdatesSettingsSection() {
       onShowAppUpdateResult={openAppUpdateResultDetails}
       onRelaunchDesktop={useServerUpdate ? null : relaunchDesktop}
       onRetryDesktop={useServerUpdate ? null : retryDesktop}
-      releaseNotes={releaseNotes}
-      summary={<ReleaseNotesPreview {...releaseNotesVersion} />}
+      releaseNotes={releaseNotesToggle("server")}
     />
   );
   const desktopClientRow = (
@@ -1919,7 +1943,7 @@ export function UpdatesSettingsSection() {
       onRetryAppCheck={handleCheckForUpdates}
       onRelaunchDesktop={relaunchDesktop}
       onRetryDesktop={retryDesktop}
-      releaseNotes={desktopReleaseNotes}
+      releaseNotes={releaseNotesToggle("desktop")}
     />
   );
 
@@ -1947,9 +1971,13 @@ export function UpdatesSettingsSection() {
     <div className="space-y-6">
       <BbUpdatesCard>
         {serverAppRow}
-        {serverRunsSeparately && desktopRowNeedsAttention(desktopInfo)
-          ? desktopClientRow
-          : null}
+        {releaseNotesPanel("server")}
+        {serverRunsSeparately && desktopRowNeedsAttention(desktopInfo) ? (
+          <>
+            {desktopClientRow}
+            {releaseNotesPanel("desktop")}
+          </>
+        ) : null}
       </BbUpdatesCard>
 
       <ProviderCliUpdatesSection

@@ -282,9 +282,8 @@ first-send events through `POST /api/v1/system/telemetry/events`
 `onboarding_step_reached`, `onboarding_step_completed`,
 `onboarding_step_skipped`, `onboarding_finished`, `onboarding_agent_state`,
 `onboarding_sign_in`, and `new_thread_submit` (started, accepted, or failed),
-and the Settings → Updates release notes events: `release_notes_preview_shown`
-(with `update_available`) and `release_notes_opened` (`entry_point`
-`updates_link`).
+and `release_notes_opened` from Settings → Updates (`view` `inline` when the
+notes open under the bb row, `web` for the full notes on getbb.app).
 The route accepts only these events with fixed enums and booleans, plus a
 `release_version` of digits and dots (such as `0.47.0`): no provider ids,
 account details, prompts, release-note text, project or file names, terminal
@@ -803,10 +802,6 @@ off. An experiment you set yourself keeps your value either way.
 `/system/config` and `sdk.system.config()` return the resolved values in
 `experiments`.
 
-- `changelogPreview` is retired. The key is still accepted but does nothing
-  and is not listed in Settings → Experiments: Settings → Updates always
-  shows the one-sentence summary of the release you can update to (or the
-  installed one) under the bb row and links its full release notes.
 - `compactExpiredCache` (on for early adopters) reports `compactionOfferAt` on a thread's context
   usage (timeline `contextWindowUsage` and `bb thread context`) once the
   provider has reported a prompt-cache lifetime, the provider supports manual
