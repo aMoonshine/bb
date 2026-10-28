@@ -57,6 +57,7 @@ describe("Pi installation without npm", () => {
     vi.stubEnv("BB_PI_BRIDGE_COMMAND", "");
     const npmCli = path.join(binDir, "npm-cli.js");
     await fs.writeFile(npmCli, 'console.log("1.4.0")');
+    vi.spyOn(hostToolchain, "refresh").mockResolvedValue();
     vi.spyOn(hostToolchain, "bundledNpmCli").mockReturnValue(npmCli);
     vi.spyOn(hostToolchain, "environment").mockImplementation(
       (env = process.env) => ({ ...env }),
