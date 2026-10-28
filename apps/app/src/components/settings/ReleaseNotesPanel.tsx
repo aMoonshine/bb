@@ -131,19 +131,21 @@ export function ReleaseNotesPanel({ id, version }: ReleaseNotesPanelProps) {
           {moreBelow ? <OverflowFade placement="below" inset /> : null}
         </div>
       )}
-      <a
-        href={getReleaseNotesUrl(version)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-2 inline-flex w-fit cursor-pointer items-center gap-1 rounded-sm text-xs text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-        onClick={(event) => {
-          event.preventDefault();
-          openReleaseNotesOnWeb(version);
-        }}
-      >
-        Full release notes
-        <Icon aria-hidden name="ExternalLink" className="size-3" />
-      </a>
+      <div className="mt-2 flex justify-end">
+        <a
+          href={getReleaseNotesUrl(version)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-fit cursor-pointer items-center gap-1 rounded-sm text-xs text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+          onClick={(event) => {
+            event.preventDefault();
+            openReleaseNotesOnWeb(version);
+          }}
+        >
+          Full release notes
+          <Icon aria-hidden name="ExternalLink" className="size-3" />
+        </a>
+      </div>
     </section>
   );
 }
