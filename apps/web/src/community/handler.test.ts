@@ -14,6 +14,17 @@ const enabled = () => ({
   COMMUNITY_FORMS_ENABLED: "true",
   COMMUNITY_FORM_RATE_LIMITER: { limit: async () => ({ success: true }) },
 });
+const requiredFields = {
+  discovery: "GitHub",
+  work: "I don't use bb for work",
+  role: "Student",
+  love: "Plugins",
+  improve: "Search",
+  community: "Merch",
+  city: "Austin",
+  meetup: "I'd come",
+};
+const requiredAnswers = Object.fromEntries(Object.entries(requiredFields).map(([key, value]) => [key, [value]]));
 const submit = (
   id = crypto.randomUUID(),
   fields: Record<string, string> = {},
@@ -23,6 +34,7 @@ const submit = (
       method: "POST",
       headers: { Origin: origin },
       body: new URLSearchParams({
+        ...requiredFields,
         submission_id: id,
         email: "ada@example.test",
         ...fields,
@@ -95,6 +107,7 @@ describe("private community forms", () => {
         .first("answers"),
     ).toBe(
       JSON.stringify({
+        ...requiredAnswers,
         community: ["Merch"],
         email: ["ada@example.test"],
       }),
@@ -162,6 +175,7 @@ describe("private community forms", () => {
         method: "POST",
         headers: { Origin: origin },
         body: new URLSearchParams([
+          ...Object.entries(requiredFields).filter(([name]) => name !== "community"),
           ["submission_id", id],
           ["email", "ada@example.test"],
           ["community", "Merch"],
@@ -177,8 +191,9 @@ describe("private community forms", () => {
       .prepare("SELECT answers FROM community_survey_response WHERE id = ?")
       .bind(id)
       .first("answers");
-    expect(answers).toBe(
-      JSON.stringify({
+    expect(JSON.parse(String(answers))).toEqual(
+      ({
+        ...requiredAnswers,
         community: ["Merch", "Other"],
         community_other: ["Workshops"],
         email: ["ada@example.test"],
@@ -191,14 +206,14 @@ describe("private community forms", () => {
     "Just me",
     "I don't use bb for work",
     "I'm not sure",
-    "",
   ])(
     "stores experience answers and discards inapplicable team feedback for %s",
     async (work) => {
       const id = crypto.randomUUID();
       const teamVisible = work === "2–4 people" || work === "5 or more";
       const response = await submit(id, {
-        ...(work ? { work } : {}),
+        work,
+        company_size: work === "I don't use bb for work" ? "ignored" : "500–999",
         love: "Fast iteration",
         improve: "Better search",
         team_improve: teamVisible ? "Shared sessions" : "x".repeat(251),
@@ -209,7 +224,9 @@ describe("private community forms", () => {
         .bind(id)
         .first<string>("answers");
       expect(JSON.parse(answers!)).toEqual({
-        ...(work ? { work: [work] } : {}),
+        ...requiredAnswers,
+        work: [work],
+        ...(work === "I don't use bb for work" ? {} : { company_size: ["500–999"] }),
         love: ["Fast iteration"],
         improve: ["Better search"],
         ...(teamVisible ? { team_improve: ["Shared sessions"] } : {}),
