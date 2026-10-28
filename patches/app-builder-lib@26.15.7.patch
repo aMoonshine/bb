@@ -1,4 +1,70 @@
+diff --git a/out/asar/asarUtil.js b/out/asar/asarUtil.js
+index 50aa8915b26195aa53fad9d7092fd9e1043badd6..c4bf48d5d4c4b82f1d2684ea6b8fb578e6ee00ef 100644
+--- a/out/asar/asarUtil.js
++++ b/out/asar/asarUtil.js
+@@ -66,7 +66,6 @@ class AsarPackager {
+         console.log = consoleLogger;
+     }
+     async processFileSets(fileSets) {
+-        var _a;
+         const unpackedPaths = new Set();
+         if (this.config.options.smartUnpack !== false) {
+             for (const fileSet of fileSets) {
+@@ -92,26 +91,33 @@ class AsarPackager {
+             }
+             return false;
+         };
+-        // First pass: process all files in order, ensuring parent directories exist
+         for (const fileSet of fileSets) {
+-            // Don't use Promise.all, we need to retain order of execution/iteration through the already-ordered fileset
+-            for (const [index, file] of fileSet.files.entries()) {
+-                const transformedData = (_a = fileSet.transformedFiles) === null || _a === void 0 ? void 0 : _a.get(index);
+-                const stat = fileSet.metadata.get(file);
+-                const destination = path.relative(this.config.defaultDestination, (0, appFileCopier_1.getDestinationPath)(file, fileSet));
+-                // Ensure parent directories exist before processing file
+-                this.ensureParentDirectories(destination, resultsMap, streamOrdering);
+-                const result = await this.processFileOrSymlink({
+-                    file,
+-                    destination,
+-                    fileSet,
+-                    transformedData,
+-                    stat,
+-                    isUnpacked,
+-                });
+-                if (result && !resultsMap.has(result.path)) {
+-                    resultsMap.set(result.path, result);
+-                    streamOrdering.push(result.path);
++            for (let offset = 0; offset < fileSet.files.length; offset += builder_util_1.MAX_FILE_REQUESTS) {
++                const batch = fileSet.files.slice(offset, offset + builder_util_1.MAX_FILE_REQUESTS);
++                const prepared = await Promise.allSettled(batch.map(async (file, index) => {
++                    const transformedData = fileSet.transformedFiles?.get(offset + index);
++                    const stat = fileSet.metadata.get(file);
++                    const destination = path.relative(this.config.defaultDestination, (0, appFileCopier_1.getDestinationPath)(file, fileSet));
++                    const result = await this.processFileOrSymlink({
++                        file,
++                        destination,
++                        fileSet,
++                        transformedData,
++                        stat,
++                        isUnpacked,
++                    });
++                    return { destination, result };
++                }));
++                for (const entry of prepared) {
++                    if (entry.status === "rejected") {
++                        throw entry.reason;
++                    }
++                    const { destination, result } = entry.value;
++                    this.ensureParentDirectories(destination, resultsMap, streamOrdering);
++                    if (result && !resultsMap.has(result.path)) {
++                        resultsMap.set(result.path, result);
++                        streamOrdering.push(result.path);
++                    }
+                 }
+             }
+         }
 diff --git a/out/targets/appimage/appImageUtil.js b/out/targets/appimage/appImageUtil.js
+index 12f078abd42700857b239b0e53cd568c1b1836b7..25841e35e18ba942507e8e659592eeb711806482 100644
 --- a/out/targets/appimage/appImageUtil.js
 +++ b/out/targets/appimage/appImageUtil.js
 @@ -19,6 +19,7 @@ async function buildStaticRuntimeAppImage(appimageToolVersion, opts) {
