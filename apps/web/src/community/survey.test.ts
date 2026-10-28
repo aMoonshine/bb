@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MEETUP_DECLINE, surveyAnswers, validateSurvey } from "./survey";
+import { surveyAnswers, validateSurvey } from "./survey";
 
 const contact = {
   email: ["ada@example.test"],
@@ -9,9 +9,9 @@ const contact = {
   role: ["Student"],
   love: ["Plugins"],
   improve: ["Faster startup"],
-  community: ["Merch"],
+  community: ["Get help when I'm stuck"],
   city: ["Austin, USA"],
-  meetup: ["I'd come"],
+  meetup: ["Maybe"],
 };
 
 describe("community survey submission rules", () => {
@@ -48,28 +48,12 @@ describe("community survey submission rules", () => {
       }).email,
     ).toBeTruthy();
   });
-  it("allows any involvement combination except the exclusive decline", () => {
-    expect(
-      validateSurvey({
-        ...contact,
-        meetup: [
-          "I'd come",
-          "I'd help host",
-          "I'd give a short talk or demo",
-          "I could offer a space",
-        ],
-      }),
-    ).toEqual({});
-    expect(validateSurvey({ ...contact, meetup: [MEETUP_DECLINE] })).toEqual(
-      {},
-    );
-    expect(
-      validateSurvey({ ...contact, meetup: ["I'd come", MEETUP_DECLINE] })
-        .meetup,
-    ).toBeTruthy();
-    expect(
-      validateSurvey({ ...contact, meetup: ["I'd come", "I'd come"] }).meetup,
-    ).toBeTruthy();
+  it("asks the organizing question as one Yes, Maybe or No answer", () => {
+    for (const meetup of [["Yes"], ["Maybe"], ["No"]]) {
+      expect(validateSurvey({ ...contact, meetup })).toEqual({});
+    }
+    expect(validateSurvey({ ...contact, meetup: ["Yes", "No"] }).meetup).toBeTruthy();
+    expect(validateSurvey({ ...contact, meetup: ["I'd come"] }).meetup).toBeTruthy();
     expect(
       validateSurvey({ ...contact, role: ["Invented"] }).role,
     ).toBeTruthy();
@@ -77,28 +61,29 @@ describe("community survey submission rules", () => {
       validateSurvey({ ...contact, city: ["x".repeat(251)] }).city,
     ).toBeTruthy();
   });
-  it("validates community choices and discards unchecked Other text", () => {
+  it("allows up to three listed community choices", () => {
     expect(
       validateSurvey({
         ...contact,
-        community: ["Merch", "Other"],
-        community_other: ["Workshops"],
+        community: [
+          "See how other people use bb",
+          "Get help when I'm stuck",
+          "Build things with other members",
+        ],
       }),
     ).toEqual({});
-    for (const community of [["Invented"], ["Merch", "Merch"]]) {
+    for (const community of [
+      ["Invented"],
+      ["See how other people use bb", "See how other people use bb"],
+      [
+        "See how other people use bb",
+        "Get help when I'm stuck",
+        "Build things with other members",
+        "Meet other bb users, online or in person",
+      ],
+    ]) {
       expect(validateSurvey({ ...contact, community }).community).toBeTruthy();
     }
-    expect(
-      validateSurvey({ ...contact, community_other: ["x".repeat(251)] })
-        .community_other,
-    ).toBeTruthy();
-    expect(
-      surveyAnswers({
-        ...contact,
-        community: ["Merch"],
-        community_other: ["Ignored"],
-      }),
-    ).toEqual({ ...contact, community: ["Merch"] });
   });
   it("stores contact and selected Other detail with answers, excluding unrelated fields", () => {
     expect(
@@ -107,8 +92,7 @@ describe("community survey submission rules", () => {
         discovery: ["Other"],
         discovery_other: ["Example"],
         role: ["Student"],
-        community: ["Merch", "Other"],
-        community_other: ["Workshops"],
+        community_other: ["Ignored"],
         role_other: ["Ignored"],
         submission_id: ["not-an-answer"],
         address: ["not-stored"],
@@ -119,8 +103,6 @@ describe("community survey submission rules", () => {
       discovery: ["Other"],
       discovery_other: ["Example"],
       role: ["Student"],
-      community: ["Merch", "Other"],
-      community_other: ["Workshops"],
     });
   });
 });

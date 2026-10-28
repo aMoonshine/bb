@@ -37,8 +37,9 @@ describe("survey page", () => {
         html.indexOf('data-question="discovery"'),
       );
       expect(html).not.toContain(">bb meetups<");
+      expect(html).not.toContain("We&#x27;re starting bb meetups");
       expect(html.indexOf('data-question="community"')).toBeLessThan(
-        html.indexOf("We&#x27;re starting bb meetups"),
+        html.indexOf("So we know where to start meetups."),
       );
       expect(
         html.indexOf("What you&#x27;d like from the bb community"),
@@ -54,17 +55,17 @@ describe("survey page", () => {
       const choices = [
         ...community.matchAll(/name="community" value="([^"]+)"/g),
       ].map((match) => match[1]);
-      expect(choices).toHaveLength(7);
-      expect(choices.at(-1)).toBe("Other");
-      expect(choices[0]).toBe("Online build sessions");
+      expect(choices).toHaveLength(6);
+      expect(choices).not.toContain("Other");
+      expect(choices[0]).toBe("See how other people use bb");
       expect(community).toContain(
-        "What would you like from the bb community?</span> (pick any)",
+        "What would you most want from the bb community?</span> (pick up to 3)",
       );
-      expect(community).toContain('name="community_other"');
+      expect(community).not.toContain('name="community_other"');
       expect(
         surveyQuestions.find((question) => question.name === "community")
           ?.options,
-      ).toHaveLength(7);
+      ).toHaveLength(6);
     } finally {
       vi.unstubAllGlobals();
     }

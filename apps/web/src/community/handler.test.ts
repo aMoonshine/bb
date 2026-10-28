@@ -20,9 +20,9 @@ const requiredFields = {
   role: "Student",
   love: "Plugins",
   improve: "Search",
-  community: "Merch",
+  community: "Get help when I'm stuck",
   city: "Austin",
-  meetup: "I'd come",
+  meetup: "Maybe",
 };
 const requiredAnswers = Object.fromEntries(Object.entries(requiredFields).map(([key, value]) => [key, [value]]));
 const submit = (
@@ -97,7 +97,7 @@ describe("private community forms", () => {
   });
   it("allocates one hashed code per new submission without storing it with answers", async () => {
     const id = crypto.randomUUID();
-    const html = await (await submit(id, { community: "Merch" })).text();
+    const html = await (await submit(id, { community: "Get help when I'm stuck" })).text();
     const code = codeFrom(html)!;
     expect(code).toMatch(/^[a-f0-9]{32}$/);
     expect(
@@ -108,7 +108,7 @@ describe("private community forms", () => {
     ).toBe(
       JSON.stringify({
         ...requiredAnswers,
-        community: ["Merch"],
+        community: ["Get help when I'm stuck"],
         email: ["ada@example.test"],
       }),
     );
@@ -168,7 +168,7 @@ describe("private community forms", () => {
     expect(html).not.toContain("hat and stickers");
     expect(codeFrom(html)).toBeTruthy();
   });
-  it("stores multiple community choices and selected Other text", async () => {
+  it("stores up to three community choices", async () => {
     const id = crypto.randomUUID();
     const response = await handleCommunityForm(
       new Request(`${origin}/community/survey`, {
@@ -178,9 +178,8 @@ describe("private community forms", () => {
           ...Object.entries(requiredFields).filter(([name]) => name !== "community"),
           ["submission_id", id],
           ["email", "ada@example.test"],
-          ["community", "Merch"],
-          ["community", "Other"],
-          ["community_other", "Workshops"],
+          ["community", "See how other people use bb"],
+          ["community", "Build things with other members"],
         ]),
       }),
       enabled(),
@@ -194,8 +193,7 @@ describe("private community forms", () => {
     expect(JSON.parse(String(answers))).toEqual(
       ({
         ...requiredAnswers,
-        community: ["Merch", "Other"],
-        community_other: ["Workshops"],
+        community: ["See how other people use bb", "Build things with other members"],
         email: ["ada@example.test"],
       }),
     );

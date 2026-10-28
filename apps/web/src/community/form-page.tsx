@@ -12,8 +12,8 @@ import {
   SURVEY_TITLE,
   SOLD_OUT,
   SURVEY_PURPOSE,
-  MEETUP_FRAMING,
-  MEETUP_DECLINE,
+  CITY_HELP,
+  COMMUNITY_MAX,
   surveyQuestions,
   type FormErrors,
   type FormValues,
@@ -37,7 +37,10 @@ if (form) {
     company.disabled = company.hidden;
     if (company.hidden) for (const input of company.querySelectorAll('input')) input.checked = false;
     const city = form.elements.namedItem('city').value.trim();
-    form.querySelector('[data-meetup-label]').textContent = 'If there were a bb meetup near ' + (city || 'you') + ', how would you like to be involved?';
+    form.querySelector('[data-meetup-label]').textContent = 'Would you be interested in helping organize a bb meetup ' + (city ? 'in ' + city : 'near you') + '?';
+    const picks = form.querySelectorAll('[name="community"]');
+    const full = [...picks].filter(box => box.checked).length >= ${COMMUNITY_MAX};
+    for (const box of picks) box.disabled = full && !box.checked;
     for (const input of form.querySelectorAll('[data-other]')) {
       const selected = form.querySelector('[name="' + input.dataset.other + '"][value="Other"]:checked');
       input.hidden = selected?.value !== 'Other';
@@ -60,11 +63,6 @@ if (form) {
     }
   });
   form.addEventListener('change', e => {
-    if (e.target.name === 'meetup' && e.target.checked) {
-      for (const input of form.querySelectorAll('[name="meetup"]')) {
-        if (input !== e.target && (e.target.value === ${JSON.stringify(MEETUP_DECLINE)} || input.value === ${JSON.stringify(MEETUP_DECLINE)})) input.checked = false;
-      }
-    }
     update();
   });
   form.addEventListener('input', update);
@@ -73,12 +71,12 @@ if (form) {
 `;
 
 function shuffled(options: readonly string[], fixedLast: number): string[] {
-  const result = options.slice(0, -fixedLast);
+  const result = options.slice(0, options.length - fixedLast);
   for (let index = result.length - 1; index > 0; index--) {
     const other = Math.floor(Math.random() * (index + 1));
     [result[index], result[other]] = [result[other]!, result[index]!];
   }
-  return [...result, ...options.slice(-fixedLast)];
+  return [...result, ...options.slice(options.length - fixedLast)];
 }
 
 function Survey({
@@ -104,9 +102,6 @@ function Survey({
               What you'd like from the bb community
             </h2>
           )}
-          {question.name === "city" && (
-            <p className="community-meetup">{MEETUP_FRAMING}</p>
-          )}
           <fieldset
             id={`question-${question.name}`}
             data-question={question.name}
@@ -130,17 +125,23 @@ function Survey({
                 data-meetup-label={question.name === "meetup" ? "" : undefined}
               >
                 {question.name === "meetup" && city
-                  ? `If there were a bb meetup near ${city}, how would you like to be involved?`
+                  ? `Would you be interested in helping organize a bb meetup in ${city}?`
                   : question.label}
               </span>
-              {question.type === "checkbox" && " (pick any)"}
+              {question.type === "checkbox" &&
+                (question.name === "community"
+                  ? ` (pick up to ${COMMUNITY_MAX})`
+                  : " (pick any)")}
             </legend>
+            {question.name === "city" && (
+              <p className="community-help">{CITY_HELP}</p>
+            )}
             {question.options.length ? (
               <div className="community-options">
                 {(question.name === "discovery"
                   ? shuffled(question.options, 2)
                   : question.name === "community"
-                    ? shuffled(question.options, 1)
+                    ? shuffled(question.options, 0)
                     : question.options
                 ).map((option) => (
                   <label key={option} className="community-option">

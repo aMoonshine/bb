@@ -5,15 +5,14 @@ export const SURVEY_DESCRIPTION =
   "We're thinking about where to take bb next and would love to hear from you. From product changes to meetups and merch, your input is important for how we think about what's next.";
 export const SURVEY_PURPOSE =
   "This survey should take ~3 minutes. As a small thank you, we'll send you bb stickers free of charge. Thanks for building with us!";
-export const MEETUP_FRAMING =
-  "We're starting bb meetups: small get-togethers to build with agents and see how other people work. Tell us where you are so we know where to start.";
+export const CITY_HELP = "So we know where to start meetups.";
+export const COMMUNITY_MAX = 3;
 export const TEAM_WORK_OPTIONS = ["2–4 people", "5 or more"];
 export function companySizeVisible(values: FormValues): boolean {
   const work = values.work?.[0];
   return Boolean(work && work !== "I don't use bb for work");
 }
 
-export const MEETUP_DECLINE = "Not for me right now";
 export const SOLD_OUT =
   "We've given out all the stickers for now. Thank you for answering.";
 
@@ -102,16 +101,15 @@ export const surveyQuestions: readonly Question[] = [
   },
   {
     name: "community",
-    label: "What would you like from the bb community?",
+    label: "What would you most want from the bb community?",
     type: "checkbox",
     options: [
-      "Meetups and events",
-      "Online build sessions",
-      "Merch",
-      "A place to show what you've built",
-      "Help and tips from other members",
-      "Ways to help build bb",
-      "Other",
+      "Meet other bb users, online or in person",
+      "See how other people use bb",
+      "Share what I've built and get feedback",
+      "Get help when I'm stuck",
+      "Build things with other members",
+      "Hear what's coming and have a say in it",
     ],
     placeholder: "",
   },
@@ -124,16 +122,9 @@ export const surveyQuestions: readonly Question[] = [
   },
   {
     name: "meetup",
-    label:
-      "If there were a bb meetup near you, how would you like to be involved?",
-    type: "checkbox",
-    options: [
-      "I'd come",
-      "I'd help host",
-      "I'd give a short talk or demo",
-      "I could offer a space",
-      MEETUP_DECLINE,
-    ],
+    label: "Would you be interested in helping organize a bb meetup near you?",
+    type: "radio",
+    options: ["Yes", "Maybe", "No"],
     placeholder: "",
   },
 ];
@@ -144,7 +135,6 @@ export const surveyFields = [
   ...surveyQuestions.map((question) => question.name),
   "discovery_other",
   "role_other",
-  "community_other",
   "email",
 ];
 
@@ -165,11 +155,10 @@ export function validateSurvey(values: FormValues): FormErrors {
     } else if (new Set(selected).size !== selected.length) {
       errors[question.name] = "Choose each answer only once.";
     } else if (
-      question.name === "meetup" &&
-      selected.includes(MEETUP_DECLINE) &&
-      selected.length > 1
+      question.name === "community" &&
+      selected.length > COMMUNITY_MAX
     ) {
-      errors.meetup = 'Choose involvement options or "Not for me right now".';
+      errors.community = `Pick up to ${COMMUNITY_MAX}.`;
     } else if (
       (question.name !== "team_improve" ||
         TEAM_WORK_OPTIONS.includes(values.work?.[0] ?? "")) &&
@@ -181,7 +170,6 @@ export function validateSurvey(values: FormValues): FormErrors {
   for (const name of [
     "discovery_other",
     "role_other",
-    "community_other",
     "email",
   ]) {
     const selected = values[name] ?? [];
