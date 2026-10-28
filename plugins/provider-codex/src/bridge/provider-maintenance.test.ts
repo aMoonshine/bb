@@ -398,6 +398,7 @@ describe("Codex native install", () => {
   });
 
   afterEach(async () => {
+    await hostToolchain.refresh();
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
     await fs.rm(root, { force: true, recursive: true });
