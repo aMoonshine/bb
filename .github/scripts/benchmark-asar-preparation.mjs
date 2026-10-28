@@ -1,11 +1,11 @@
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync, openSync, closeSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, openSync, closeSync, realpathSync } from "node:fs";
 import { lstat, readdir, readFile, readlink } from "node:fs/promises";
 import { join, resolve, relative } from "node:path";
 const root = process.cwd();
-const req = createRequire(resolve("apps/desktop/node_modules/electron-builder/package.json"));
+const req = createRequire(realpathSync(resolve("apps/desktop/node_modules/electron-builder/package.json")));
 const target = req.resolve("app-builder-lib/out/asar/asarUtil.js");
 const baseline = readFileSync(target);
 const candidate = readFileSync(".github/scripts/candidate-asar-util.cjs");
