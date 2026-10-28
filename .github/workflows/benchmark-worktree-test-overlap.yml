@@ -1,0 +1,54 @@
+name: Compare worktree test overlap in full plugins job
+on:
+  push:
+    branches: [bb/benchmark-worktree-test-overlap]
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: blacksmith-4vcpu-windows-2025
+            order: baseline-first
+          - runner: blacksmith-4vcpu-windows-2025
+            order: candidate-first
+          - runner: blacksmith-4vcpu-ubuntu-2404
+            order: baseline-first
+    env:
+      VITEST_MAX_WORKERS: ${{ matrix.runner == 'blacksmith-4vcpu-ubuntu-2404' && '2' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.x
+          package-manager-cache: false
+      - run: npm install --global pnpm@9.15.0 --ignore-scripts
+      - uses: ./.github/actions/windows-dependency-cache
+        if: runner.os == 'Windows'
+        timeout-minutes: 1
+        continue-on-error: true
+      - name: Install dependencies
+        shell: bash
+        run: bash .github/actions/setup-workspace/install-dependencies.sh --ignore-scripts --filter '!@bb/mobile'
+      - uses: ./.github/actions/setup-bun
+        if: runner.os == 'Linux'
+        with:
+          version: '1.3.14'
+      - name: Warm full plugin suite and prerequisites
+        shell: bash
+        run: pnpm exec turbo run test --filter='bb-plugin-*' --filter='!bb-plugin-provider-*' --filter='!bb-plugin-tasks' --filter='!bb-plugin-connect' --filter='!bb-plugin-thread-list' --output-logs=errors-only --concurrency=${{ runner.os == 'Windows' && '2' || '4' }}
+      - name: Compare full plugin suites
+        env:
+          BENCHMARK_ORDER: ${{ matrix.order }}
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        run: node .github/benchmarks/worktree-overlap.mjs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always()
+        with:
+          name: worktree-overlap-${{ runner.os }}-${{ matrix.order }}
+          path: ${{ runner.temp }}/worktree-overlap/
