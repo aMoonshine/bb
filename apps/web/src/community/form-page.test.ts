@@ -95,6 +95,7 @@ describe("survey page", () => {
       },
       querySelector: (selector: string) => {
         if (selector === '[data-question="team_improve"]') return team;
+        if (selector === '[data-question="company_size"]') return { hidden: false, disabled: false, querySelectorAll: () => [] };
         if (selector === "[data-meetup-label]") return { textContent: "" };
         expect(selector).toBe('[name="community"][value="Other"]:checked');
         return otherChecked ? { value: "Other" } : null;

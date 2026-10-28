@@ -4,6 +4,7 @@ import type { Env } from "../server/env";
 import { formPage, type FormKind } from "./form-page";
 import {
   TEAM_WORK_OPTIONS,
+  companySizeVisible,
   surveyFields,
   surveyAnswers,
   validateSurvey,
@@ -163,6 +164,7 @@ export async function handleCommunityForm(
   }
   if (!TEAM_WORK_OPTIONS.includes(values.work?.[0] ?? ""))
     delete values.team_improve;
+  if (!companySizeVisible(values)) delete values.company_size;
   const parsedId = z
     .uuid()
     .safeParse(

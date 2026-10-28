@@ -8,6 +8,11 @@ export const SURVEY_PURPOSE =
 export const MEETUP_FRAMING =
   "We're starting bb meetups: small get-togethers to build with agents and see how other people work. Tell us where you are so we know where to start.";
 export const TEAM_WORK_OPTIONS = ["2–4 people", "5 or more"];
+export function companySizeVisible(values: FormValues): boolean {
+  const work = values.work?.[0];
+  return Boolean(work && work !== "I don't use bb for work");
+}
+
 export const MEETUP_DECLINE = "Not for me right now";
 export const SOLD_OUT =
   "We've given out all the stickers for now. Thank you for answering.";
@@ -49,6 +54,13 @@ export const surveyQuestions: readonly Question[] = [
       "5 or more",
       "I'm not sure",
     ],
+    placeholder: "",
+  },
+  {
+    name: "company_size",
+    label: "Approximately how many people work at your company?",
+    type: "radio",
+    options: ["Fewer than 200", "200–499", "500–999", "1,000 or more"],
     placeholder: "",
   },
   {
@@ -139,6 +151,7 @@ export const surveyFields = [
 export function validateSurvey(values: FormValues): FormErrors {
   const errors: FormErrors = {};
   for (const question of surveyQuestions) {
+    if (question.name === "company_size" && !companySizeVisible(values)) continue;
     const selected = values[question.name] ?? [];
     if (question.type !== "checkbox" && selected.length > 1) {
       errors[question.name] = "Choose one answer.";
@@ -191,6 +204,7 @@ export function validateSurvey(values: FormValues): FormErrors {
 export function surveyAnswers(values: FormValues): FormValues {
   const answers: FormValues = {};
   for (const name of surveyFields) {
+    if (name === "company_size" && !companySizeVisible(values)) continue;
     if (
       name === "team_improve" &&
       !TEAM_WORK_OPTIONS.includes(values.work?.[0] ?? "")

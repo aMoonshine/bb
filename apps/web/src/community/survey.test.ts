@@ -5,6 +5,7 @@ const contact = {
   email: ["ada@example.test"],
   discovery: ["GitHub"],
   work: ["Just me"],
+  company_size: ["Fewer than 200"],
   role: ["Student"],
   love: ["Plugins"],
   improve: ["Faster startup"],
@@ -14,6 +15,14 @@ const contact = {
 };
 
 describe("community survey submission rules", () => {
+  it.each(["", "I don't use bb for work", "Just me", "2–4 people", "5 or more", "I'm not sure"])("conditions company size on %s", (work) => {
+    const values = { ...contact, work: work ? [work] : [], company_size: [] };
+    const shown = Boolean(work && work !== "I don't use bb for work");
+    expect(Boolean(validateSurvey(values).company_size)).toBe(shown);
+    expect(surveyAnswers({ ...values, company_size: ["500–999"] }).company_size)
+      .toEqual(shown ? ["500–999"] : undefined);
+  });
+
   it("requires every shown question and valid contact details", () => {
     expect(validateSurvey(contact)).toEqual({});
     const missing = validateSurvey({});

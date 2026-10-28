@@ -7,6 +7,7 @@ import { THEME_INIT } from "../lib/theme";
 import css from "./forms.css?url";
 import {
   TEAM_WORK_OPTIONS,
+  companySizeVisible,
   SURVEY_DESCRIPTION,
   SURVEY_TITLE,
   SOLD_OUT,
@@ -30,6 +31,11 @@ if (form) {
     team.hidden = !${JSON.stringify(TEAM_WORK_OPTIONS)}.includes(form.elements.namedItem('work').value);
     team.disabled = team.hidden;
     if (team.hidden) team.querySelector('textarea').value = '';
+    const company = form.querySelector('[data-question="company_size"]');
+    const work = form.elements.namedItem('work').value;
+    company.hidden = !work || work === "I don't use bb for work";
+    company.disabled = company.hidden;
+    if (company.hidden) for (const input of company.querySelectorAll('input')) input.checked = false;
     const city = form.elements.namedItem('city').value.trim();
     form.querySelector('[data-meetup-label]').textContent = 'If there were a bb meetup near ' + (city || 'you') + ', how would you like to be involved?';
     for (const input of form.querySelectorAll('[data-other]')) {
@@ -105,12 +111,14 @@ function Survey({
             id={`question-${question.name}`}
             data-question={question.name}
             hidden={
-              question.name === "team_improve" &&
-              !TEAM_WORK_OPTIONS.includes(values.work?.[0] ?? "")
+              (question.name === "company_size" && !companySizeVisible(values)) ||
+              (question.name === "team_improve" &&
+              !TEAM_WORK_OPTIONS.includes(values.work?.[0] ?? ""))
             }
             disabled={
-              question.name === "team_improve" &&
-              !TEAM_WORK_OPTIONS.includes(values.work?.[0] ?? "")
+              (question.name === "company_size" && !companySizeVisible(values)) ||
+              (question.name === "team_improve" &&
+              !TEAM_WORK_OPTIONS.includes(values.work?.[0] ?? ""))
             }
             aria-describedby={
               errors[question.name] ? `${question.name}-error` : undefined
