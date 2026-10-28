@@ -99,7 +99,8 @@ describe("survey page", () => {
         expect(selector).toBe('[name="community"][value="Other"]:checked');
         return otherChecked ? { value: "Other" } : null;
       },
-      querySelectorAll: () => [otherInput],
+      querySelectorAll: (selector: string) =>
+        selector === "[data-other]" ? [otherInput] : [],
       addEventListener: (event: string, callback: () => void) => {
         if (event === "input") update = callback;
       },

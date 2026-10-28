@@ -157,6 +157,12 @@ export function validateSurvey(values: FormValues): FormErrors {
       selected.length > 1
     ) {
       errors.meetup = 'Choose involvement options or "Not for me right now".';
+    } else if (
+      (question.name !== "team_improve" ||
+        TEAM_WORK_OPTIONS.includes(values.work?.[0] ?? "")) &&
+      !selected.some((value) => value.trim())
+    ) {
+      errors[question.name] = "Please answer this question.";
     }
   }
   for (const name of [
@@ -168,6 +174,12 @@ export function validateSurvey(values: FormValues): FormErrors {
     const selected = values[name] ?? [];
     if (selected.length > 1 || selected.some((value) => value.length > 250)) {
       errors[name] = "Please use one answer of up to 250 characters.";
+    } else if (
+      name.endsWith("_other") &&
+      values[name.slice(0, -6)]?.includes("Other") &&
+      !selected[0]?.trim()
+    ) {
+      errors[name] = "Please tell us what you mean by Other.";
     }
   }
   if (!values.email?.[0]?.trim()) errors.email = "Please enter your email.";

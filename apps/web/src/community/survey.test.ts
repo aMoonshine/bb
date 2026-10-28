@@ -1,14 +1,34 @@
 import { describe, expect, it } from "vitest";
 import { MEETUP_DECLINE, surveyAnswers, validateSurvey } from "./survey";
 
-const contact = { email: ["ada@example.test"] };
+const contact = {
+  email: ["ada@example.test"],
+  discovery: ["GitHub"],
+  work: ["Just me"],
+  role: ["Student"],
+  love: ["Plugins"],
+  improve: ["Faster startup"],
+  community: ["Merch"],
+  city: ["Austin, USA"],
+  meetup: ["I'd come"],
+};
 
 describe("community survey submission rules", () => {
-  it("allows all questions to be skipped but requires valid contact details", () => {
+  it("requires every shown question and valid contact details", () => {
     expect(validateSurvey(contact)).toEqual({});
-    expect(validateSurvey({})).toEqual({
-      email: "Please enter your email.",
-    });
+    const missing = validateSurvey({});
+    expect(missing.email).toBe("Please enter your email.");
+    expect(missing.love).toBe("Please answer this question.");
+    expect(missing.team_improve).toBeUndefined();
+    expect(
+      validateSurvey({ ...contact, work: ["2–4 people"] }).team_improve,
+    ).toBe("Please answer this question.");
+    expect(
+      validateSurvey({ ...contact, improve: ["   "] }).improve,
+    ).toBeTruthy();
+    expect(
+      validateSurvey({ ...contact, discovery: ["Other"] }).discovery_other,
+    ).toBeTruthy();
     expect(
       validateSurvey({ ...contact, email: ["invalid"] }).email,
     ).toBeTruthy();

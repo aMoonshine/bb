@@ -36,8 +36,23 @@ if (form) {
       const selected = form.querySelector('[name="' + input.dataset.other + '"][value="Other"]:checked');
       input.hidden = selected?.value !== 'Other';
       input.disabled = input.hidden;
+      input.required = !input.hidden;
+    }
+    for (const set of form.querySelectorAll('fieldset[data-question]')) {
+      const boxes = set.querySelectorAll('input[type="checkbox"]');
+      if (boxes.length && [...boxes].some(box => box.checked)) boxes[0].setCustomValidity('');
     }
   };
+  form.addEventListener('submit', e => {
+    for (const set of form.querySelectorAll('fieldset[data-question]')) {
+      const boxes = set.querySelectorAll('input[type="checkbox"]');
+      if (set.disabled || !boxes.length || [...boxes].some(box => box.checked)) continue;
+      boxes[0].setCustomValidity('Please pick at least one.');
+      boxes[0].reportValidity();
+      e.preventDefault();
+      return;
+    }
+  });
   form.addEventListener('change', e => {
     if (e.target.name === 'meetup' && e.target.checked) {
       for (const input of form.querySelectorAll('[name="meetup"]')) {
@@ -125,6 +140,7 @@ function Survey({
                       type={question.type === "checkbox" ? "checkbox" : "radio"}
                       name={question.name}
                       value={option}
+                      required={question.type === "radio"}
                       defaultChecked={values[question.name]?.includes(option)}
                     />
                     <span>{option === "Other" ? "Other:" : option}</span>
@@ -136,6 +152,7 @@ function Survey({
                 name={question.name}
                 aria-label={question.label}
                 placeholder={question.placeholder}
+                required
                 rows={3}
                 maxLength={250}
                 defaultValue={
@@ -151,6 +168,7 @@ function Survey({
                 name={question.name}
                 aria-label={question.label}
                 placeholder={question.placeholder}
+                required
                 maxLength={250}
                 defaultValue={values[question.name]?.[0] ?? ""}
               />
