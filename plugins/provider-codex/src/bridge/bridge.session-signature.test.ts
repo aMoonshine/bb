@@ -361,7 +361,11 @@ it("applies follow-up permission changes in both directions without replacing th
       options: testCase.options,
     });
     expect((await harness.waitForResponse(id)).error).toBeUndefined();
-    expect(recordedRequests().at(-1)).toMatchObject({
+    expect(
+      recordedRequests()
+        .filter((request) => request.method === "turn/start")
+        .at(-1),
+    ).toMatchObject({
       method: "turn/start",
       params: {
         approvalPolicy: testCase.approvalPolicy,
