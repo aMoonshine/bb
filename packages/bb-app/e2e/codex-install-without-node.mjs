@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { setupBrowser } from "./setup-browser.mjs";
 import { execFile, spawn } from "node:child_process";
 import {
   appendFile,
@@ -40,6 +41,7 @@ const report = { sha: process.env.GITHUB_SHA, checks: [], status: "failed" };
 const delay = (ms) => new Promise((done) => setTimeout(done, ms));
 let root;
 let launcher;
+let browser;
 let savedPaths;
 let stage = "prepare isolated runner";
 
@@ -88,7 +90,7 @@ async function freePort() {
 }
 
 async function assertAbsent(env) {
-  for (const name of ["node", "npm", "codex"]) {
+  for (const name of ["node", "npm", "codex", "pi"]) {
     const result = await exec(
       join(systemRoot, "System32", "where.exe"),
       [name],
@@ -307,11 +309,8 @@ try {
   assert.equal(before.codex.installAction?.kind, "install");
   assert.equal((await health()).status, "not_installed");
   assert.equal(before.pi.installed, false);
-  assert.equal(before.pi.installAction, null);
-  assert.equal(before.pi.missingPrerequisite, "nodejs");
-  pass(
-    "Fresh setup offers Codex Install and reports Pi's missing Node.js prerequisite",
-  );
+
+  pass("Fresh setup offers Codex Install");
 
   stage = "green after: real native installation through setup route";
   const events = await api(`/hosts/${hostId}/provider-clis/install`, {
@@ -389,6 +388,51 @@ try {
   pass(
     "Provider health is installed and unauthenticated; no credentials or sign-in completion used",
   );
+  stage = "Pi Install button without Node.js";
+  browser = await setupBrowser({
+    executable: join(
+      process.env.ProgramFiles,
+      "Google",
+      "Chrome",
+      "Application",
+      "chrome.exe",
+    ),
+    profile: join(root, "browser"),
+    url: serverUrl,
+  });
+  await browser.clickInstall("pi");
+  pass("Setup exposes Pi's normal Install button without Node.js");
+  const pi = await browser.wait(
+    async () => {
+      const status = (await installation()).pi;
+      return status.installed && status.currentVersion ? status : null;
+    },
+    "Pi installation must finish",
+    600_000,
+  );
+  assert(pi.executablePath);
+  const piVersion = await ps(
+    `& '${pi.executablePath.replaceAll("'", "''")}' --version`,
+    env,
+  );
+  assert(piVersion.includes(pi.currentVersion));
+  const piHealth = await browser.wait(async () => {
+    const provider = (
+      await api(`/system/providers/state?hostId=${hostId}`)
+    ).providers.find((provider) => provider.providerId === "pi");
+    return provider?.status === "unauthenticated" ? provider : null;
+  }, "Pi must be installed and not signed in");
+  assert.equal(piHealth.installedVersion, pi.currentVersion);
+  await browser.wait(
+    () =>
+      browser.evaluate(
+        `document.querySelector('[data-agent-id="pi"]')?.textContent.includes('Not signed in')`,
+      ),
+    "Setup must show Pi is not signed in",
+  );
+  pass(
+    "Pi Install succeeds, its executable reports a version, and setup reaches installed and not signed in",
+  );
   report.status = "passed";
 } catch (error) {
   report.failure = diagnostic(error.message);
@@ -398,6 +442,7 @@ try {
   );
   process.exitCode = 1;
 } finally {
+  browser?.close();
   try {
     await stop();
   } catch {
