@@ -108,6 +108,9 @@ export function ReleaseNotesPanel({ id, version }: ReleaseNotesPanelProps) {
       data-updates-domain="release-notes"
       className="px-4 py-3 text-xs leading-relaxed text-muted-foreground"
     >
+      <h3 className="mb-1.5 text-xs font-medium text-foreground">
+        What&apos;s new
+      </h3>
       {entry === null ? (
         <p>bb {version} has no release notes in the app.</p>
       ) : (

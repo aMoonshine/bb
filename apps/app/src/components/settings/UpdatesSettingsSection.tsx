@@ -231,11 +231,11 @@ function RowName({
 }) {
   return (
     <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
-      <span className="w-16 shrink-0 truncate text-sm font-medium text-foreground">
+      <span className="shrink-0 truncate text-sm font-medium text-foreground @min-[28rem]/update-row:w-16">
         {name}
       </span>
       {current === null && trailing === null ? null : (
-        <span className="inline-flex min-w-0 basis-full flex-wrap items-baseline gap-x-2 gap-y-1 @min-[28rem]/update-row:basis-auto">
+        <span className="inline-flex shrink-0 items-baseline gap-x-2 whitespace-nowrap">
           <RowVersions current={current} latest={latest} />
           {trailing}
         </span>

@@ -538,6 +538,9 @@ describe("UpdatesSettingsSection", () => {
       expect(button.getAttribute("aria-expanded")).toBe("true");
       expect(button.getAttribute("aria-controls")).toBe(panel?.id);
       expect(
+        within(panel!).getByRole("heading", { name: "What's new" }),
+      ).toBeDefined();
+      expect(
         within(panel!).getByRole("heading", { name: "Highlights" }),
       ).toBeDefined();
       expect(
