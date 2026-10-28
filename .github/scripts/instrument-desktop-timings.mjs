@@ -14,3 +14,9 @@ function wrap(file, names) {
 wrap("apps/desktop/scripts/prepare-native-modules.cjs", ["findPackageDirectories", "preparePackagedNativeModules", "prepareBetterSqlite3PackageDirectory", "prepareParcelWatcherPackageDirectory"]);
 wrap("apps/desktop/scripts/smoke-packaged-npm.mjs", ["hashPackagedResources", "smokePackagedNpm"]);
 wrap("apps/desktop/scripts/run-electron-builder.mjs", ["runElectronBuilder"]);
+
+const runner = "apps/desktop/scripts/run-electron-builder.mjs";
+const originalRunner = readFileSync(runner, "utf8");
+const profiledRunner = originalRunner.replace('[electronBuilderCli, "--config", generatedConfigPath, ...args]', '["--cpu-prof", `--cpu-prof-dir=${process.env.RUNNER_TEMP}/desktop-timings`, "--require", resolve(desktopPackageRoot, "../../.github/scripts/profile-desktop-builder.cjs"), electronBuilderCli, "--config", generatedConfigPath, ...args]');
+if (profiledRunner === originalRunner) throw new Error("Missing builder invocation");
+writeFileSync(runner, profiledRunner);
