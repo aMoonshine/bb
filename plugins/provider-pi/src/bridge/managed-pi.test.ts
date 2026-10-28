@@ -1,9 +1,12 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { experimental_hostToolchain as hostToolchain } from "@get-bb/plugin-sdk/process";
 import {
+  managedPiInstallCommand,
   managedPiDirectory,
   managedPiEntry,
   managedPiExecutable,
@@ -30,6 +33,7 @@ beforeEach(async () => {
 afterEach(async () => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   await rm(home, { recursive: true, force: true });
 });
 
@@ -66,3 +70,36 @@ it("rejects missing and escaped manifest executables", async () => {
   );
   expect(managedPiEntry()).toBeNull();
 });
+
+it.skipIf(process.platform === "win32")(
+  "runs the serialized installer and an AppImage launcher without leaking its sandbox sentinel",
+  async () => {
+    const runtime = process.execPath;
+    const image = path.join(home, "bb's AppImage");
+    await writeFile(
+      image,
+      `#!/bin/sh\ncase " $* " in *" --no-sandbox "*) ;; *) set -- --no-sandbox "$@";; esac\nexec '${runtime.replaceAll("'", "'\\''")}' "$@"\n`,
+      { mode: 0o755 },
+    );
+    const npm = path.join(home, "npm-cli.cjs");
+    await writeFile(
+      npm,
+      `const fs=require('node:fs');fs.writeFileSync(${JSON.stringify(path.join(packageDir, "package.json"))},JSON.stringify({bin:{pi:'cli.cjs'}}));fs.writeFileSync(${JSON.stringify(path.join(packageDir, "cli.cjs"))},'console.log(JSON.stringify(process.argv.slice(2)))');`,
+    );
+    vi.spyOn(hostToolchain, "bundledNpmCli").mockReturnValue(npm);
+    vi.stubEnv("APPIMAGE", image);
+    vi.stubGlobal("process", {
+      ...process,
+      platform: "linux",
+      versions: { ...process.versions, electron: "fixture" },
+    });
+    const command = managedPiInstallCommand("@earendil-works/pi-coding-agent");
+    await promisify(execFile)(command.command, command.args);
+    const result = await promisify(execFile)(
+      managedPiExecutable(),
+      ["--version", "with spaces"],
+      { env: { PATH: "" } },
+    );
+    expect(JSON.parse(result.stdout)).toEqual(["--version", "with spaces"]);
+  },
+);

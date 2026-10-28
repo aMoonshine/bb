@@ -81,6 +81,12 @@ export async function setupBrowser({ executable, profile, url }) {
       assert(!result.exceptionDetails, "Browser evaluation must succeed");
       return result.result.value;
     };
+    await send("Emulation.setDeviceMetricsOverride", {
+      width: 1440,
+      height: 900,
+      deviceScaleFactor: 2,
+      mobile: false,
+    });
     await send("Page.navigate", { url });
     const clickInstall = async (provider) => {
       const point = await wait(

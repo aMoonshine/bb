@@ -55,6 +55,9 @@ describe("Pi installation without npm", () => {
     vi.stubEnv("HOME", binDir);
     vi.stubEnv("USERPROFILE", binDir);
     vi.stubEnv("BB_PI_BRIDGE_COMMAND", "");
+    const npmCli = path.join(binDir, "npm-cli.js");
+    await fs.writeFile(npmCli, 'console.log("1.4.0")');
+    vi.spyOn(hostToolchain, "bundledNpmCli").mockReturnValue(npmCli);
     vi.spyOn(hostToolchain, "environment").mockImplementation(
       (env = process.env) => ({ ...env }),
     );
@@ -75,7 +78,7 @@ describe("Pi installation without npm", () => {
     expect(run.available).toBe(true);
     if (!run.available) throw new Error("Expected installation command");
     expect(run.command.command).toBe(hostToolchain.node());
-    expect(run.command.args.join(" ")).toContain(hostToolchain.bundledNpmCli());
+    expect(run.command.displayCommand).toContain(hostToolchain.bundledNpmCli());
     expect(run.command.displayCommand).toContain("--prefix");
     expect(run.command.displayCommand).toContain("--ignore-scripts");
   });

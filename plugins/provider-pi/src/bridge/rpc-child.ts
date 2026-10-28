@@ -80,8 +80,10 @@ export function resolvePiLaunch(env: NodeJS.ProcessEnv): {
   if (!command) {
     return {
       command:
-        hostToolchain.resolve("pi", { env }) ??
-        (managedPiEntry() === null ? "pi" : managedPiExecutable()),
+        hostToolchain.resolve("pi", { env }) !== null ||
+        managedPiEntry() === null
+          ? "pi"
+          : managedPiExecutable(),
       args: [],
     };
   }

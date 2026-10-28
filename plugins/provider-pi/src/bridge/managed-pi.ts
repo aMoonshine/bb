@@ -54,11 +54,12 @@ async function installPi(
   executable: string,
   runtime: string,
   electron: boolean,
+  appImage: boolean,
 ): Promise<void> {
-  const { spawn } = await import("node:child_process");
+  const { spawn } = process.getBuiltinModule("node:child_process");
   const { mkdir, readFile, realpath, writeFile } =
-    await import("node:fs/promises");
-  const path = await import("node:path");
+    process.getBuiltinModule("node:fs/promises");
+  const path = process.getBuiltinModule("node:path");
   await mkdir(prefix, { recursive: true });
   const child = spawn(
     process.execPath,
@@ -103,12 +104,16 @@ async function installPi(
     path.isAbsolute(relative)
   )
     throw new Error("Pi executable is outside its package");
-  const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
-  const winQuote = (value: string) => `"${value.replaceAll("%", "%%")}"`;
+  const [quotedRuntime, quotedCli] = [runtime, cli].map((value) =>
+    process.platform === "win32"
+      ? `"${value.replaceAll("%", "%%")}"`
+      : `'${value.replaceAll("'", "'\\''")}'`,
+  );
+  const appImageArguments = `--input-type=module --eval 'process.argv.pop(); await import(process.getBuiltinModule("node:url").pathToFileURL(process.argv[1]).href)' -- `;
   const wrapper =
     process.platform === "win32"
-      ? `@echo off\r\nsetlocal DisableDelayedExpansion\r\n${electron ? 'set "ELECTRON_RUN_AS_NODE=1"\r\n' : ""}${winQuote(runtime)} ${winQuote(cli)} %*\r\n`
-      : `#!/bin/sh\n${electron ? "export ELECTRON_RUN_AS_NODE=1\n" : ""}exec ${quote(runtime)} ${quote(cli)} "$@"\n`;
+      ? `@echo off\r\nsetlocal DisableDelayedExpansion\r\n${electron ? 'set "ELECTRON_RUN_AS_NODE=1"\r\n' : ""}${quotedRuntime} ${quotedCli} %*\r\n`
+      : `#!/bin/sh\n${electron ? "export ELECTRON_RUN_AS_NODE=1\n" : ""}exec ${quotedRuntime} ${appImage ? appImageArguments : ""}${quotedCli} "$@"${appImage ? " --no-sandbox" : ""}\n`;
   await writeFile(executable, wrapper, { mode: 0o755 });
 }
 
@@ -125,7 +130,7 @@ export function managedPiInstallCommand(
   const args = [
     "--input-type=module",
     "--eval",
-    `await (${installPi.toString()})(...${JSON.stringify([hostToolchain.bundledNpmCli(), managedPiDirectory(), packageName, managedPiExecutable(), runtime, Boolean(process.versions.electron)])})`,
+    `await (${installPi.toString()})(...${JSON.stringify([hostToolchain.bundledNpmCli(), managedPiDirectory(), packageName, managedPiExecutable(), runtime, Boolean(process.versions.electron), runtime !== command])})`,
   ];
   return {
     command,
