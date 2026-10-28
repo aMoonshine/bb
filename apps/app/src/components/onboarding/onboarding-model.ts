@@ -33,8 +33,6 @@ export const ONBOARDING_PLUGINS: readonly {
 
 export const CONNECT_PLUGIN_ID = "connect";
 
-export const NODEJS_DOWNLOAD_URL = "https://nodejs.org/en/download";
-
 export type AgentSetupState =
   | { status: "checking" }
   | { status: "ready"; detail: string | null }
@@ -45,7 +43,6 @@ export type AgentSetupState =
     }
   | { status: "signingIn" }
   | { status: "install"; canInstall: boolean }
-  | { status: "needsNodejs" }
   | { status: "update"; detail: string | null; canInstall: boolean }
   | { status: "installing" }
   | { status: "installFailed"; message: string; canInstall: boolean }
@@ -85,9 +82,8 @@ export function resolveAgentSetupState({
   const awaitingInstallInfo = cliStatus === undefined && installInfoPending;
   switch (health.status) {
     case "not_installed":
-      if (awaitingInstallInfo) return { status: "checking" };
-      return cliStatus?.missingPrerequisite === "nodejs"
-        ? { status: "needsNodejs" }
+      return awaitingInstallInfo
+        ? { status: "checking" }
         : { status: "install", canInstall };
     case "unsupported_version":
       if (awaitingInstallInfo) return { status: "checking" };

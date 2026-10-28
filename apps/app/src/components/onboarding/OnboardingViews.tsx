@@ -229,8 +229,6 @@ function agentSubline(state: AgentSetupState): string {
       return "Finish signing in below";
     case "install":
       return "Not installed";
-    case "needsNodejs":
-      return "Needs Node.js to install";
     case "update":
       return state.detail ?? "Update needed";
     case "installing":
@@ -247,7 +245,6 @@ interface AgentRowHandlers {
   onInstall: (id: string) => void;
   onViewInstallLog: (id: string) => void;
   onCancelSignIn: (id: string) => void;
-  onGetNodejs: () => void;
 }
 
 function AgentRow({
@@ -256,7 +253,6 @@ function AgentRow({
   onInstall,
   onViewInstallLog,
   onCancelSignIn,
-  onGetNodejs,
 }: AgentRowHandlers & { agent: OnboardingAgent }) {
   const { state } = agent;
   return (
@@ -274,8 +270,7 @@ function AgentRow({
           provider={agent.provider}
           className={cn(
             "size-6",
-            (state.status === "install" || state.status === "needsNodejs") &&
-              "text-muted-foreground",
+            state.status === "install" && "text-muted-foreground",
           )}
         />
         <div className="flex min-w-0 flex-1 flex-col">
@@ -333,17 +328,6 @@ function AgentRow({
                 : state.status === "update"
                   ? "Update"
                   : "Install"}
-            </Button>
-          ) : null}
-          {state.status === "needsNodejs" ? (
-            <Button
-              size="sm"
-              variant="outline"
-              aria-label="Get Node.js (opens nodejs.org)"
-              onClick={onGetNodejs}
-            >
-              <Icon name="ArrowUpRight" aria-hidden />
-              Get Node.js
             </Button>
           ) : null}
           {state.status === "signingIn" ? (

@@ -178,7 +178,7 @@ try {
   );
   await assertAbsent(env);
   pass(
-    "Node.js, npm and Codex absent from the isolated PATH and registry PATH",
+    "Node.js, npm, Pi and Codex absent from the isolated PATH and registry PATH",
   );
 
   stage = "red before: original npm installation";
@@ -426,7 +426,7 @@ try {
   await browser.wait(
     () =>
       browser.evaluate(
-        `document.querySelector('[data-agent-id="pi"]')?.textContent.includes('Not signed in')`,
+        `document.querySelector('[data-agent-id="pi"]')?.textContent.includes('Installed · not signed in')`,
       ),
     "Setup must show Pi is not signed in",
   );

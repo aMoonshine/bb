@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   describePiVersionProbeFailure,
   getPiProviderInstallationStatus,
+  getPiProviderInstallationRun,
 } from "./provider-maintenance.js";
 
 describe("describePiVersionProbeFailure", () => {
@@ -45,12 +46,14 @@ describe("describePiVersionProbeFailure", () => {
   });
 });
 
-describe("Pi install prerequisites", () => {
+describe("Pi installation without npm", () => {
   let binDir: string;
 
   beforeEach(async () => {
     binDir = await fs.mkdtemp(path.join(os.tmpdir(), "bb-pi-no-npm-"));
     vi.stubEnv("PATH", binDir);
+    vi.stubEnv("HOME", binDir);
+    vi.stubEnv("USERPROFILE", binDir);
     vi.stubEnv("BB_PI_BRIDGE_COMMAND", "");
     vi.spyOn(hostToolchain, "environment").mockImplementation(
       (env = process.env) => ({ ...env }),
@@ -63,15 +66,21 @@ describe("Pi install prerequisites", () => {
     await fs.rm(binDir, { force: true, recursive: true });
   });
 
-  it("asks for Node.js instead of offering an npm install that cannot run", async () => {
+  it("offers a private install through bb runtime when npm is absent", async () => {
     const status = await getPiProviderInstallationStatus();
 
     expect(status.installed).toBe(false);
-    expect(status.installAction).toBeNull();
-    expect(status.missingPrerequisite).toBe("nodejs");
+    expect(status.installAction?.kind).toBe("install");
+    const run = await getPiProviderInstallationRun("install");
+    expect(run.available).toBe(true);
+    if (!run.available) throw new Error("Expected installation command");
+    expect(run.command.command).toBe(hostToolchain.node());
+    expect(run.command.args.join(" ")).toContain(hostToolchain.bundledNpmCli());
+    expect(run.command.displayCommand).toContain("--prefix");
+    expect(run.command.displayCommand).toContain("--ignore-scripts");
   });
 
-  it("offers the npm install when npm is available", async () => {
+  it("still offers Install when npm is available", async () => {
     const npm = process.platform === "win32" ? "npm.cmd" : "npm";
     await fs.writeFile(
       path.join(binDir, npm),
@@ -85,6 +94,5 @@ describe("Pi install prerequisites", () => {
 
     expect(status.installed).toBe(false);
     expect(status.installAction?.kind).toBe("install");
-    expect(status.missingPrerequisite).toBeNull();
   });
 });
