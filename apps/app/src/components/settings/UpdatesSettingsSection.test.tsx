@@ -538,8 +538,10 @@ describe("UpdatesSettingsSection", () => {
       expect(button.getAttribute("aria-expanded")).toBe("true");
       expect(button.getAttribute("aria-controls")).toBe(panel?.id);
       expect(
-        within(panel!).getByRole("heading", { name: "What's new" }),
-      ).toBeDefined();
+        within(panel!).getByRole("heading", {
+          name: /^What's new in bb 0\.47\.0/,
+        }).textContent,
+      ).toBe("What's new in bb 0.47.0 · October 23, 2026");
       expect(
         within(panel!).getByRole("heading", { name: "Highlights" }),
       ).toBeDefined();

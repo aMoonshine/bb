@@ -7,6 +7,7 @@ import { openUrlInExternalBrowser } from "@/lib/url-open-routing";
 import {
   CHANGELOG_ENTRIES,
   changelogEntriesQueryOptions,
+  RELEASE_META,
   type ChangelogBlock,
 } from "./changelog-preview";
 import { findReleaseEntry } from "./release-notes-model";
@@ -90,6 +91,7 @@ export function ReleaseNotesPanel({ id, version }: ReleaseNotesPanelProps) {
     changelogQuery.data,
     CHANGELOG_ENTRIES,
   );
+  const releaseDate = RELEASE_META[version]?.date;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [moreBelow, setMoreBelow] = useState(false);
   const syncFade = (node: HTMLDivElement | null) => {
@@ -106,10 +108,15 @@ export function ReleaseNotesPanel({ id, version }: ReleaseNotesPanelProps) {
       id={id}
       aria-label={`bb ${version} release notes`}
       data-updates-domain="release-notes"
-      className="px-4 py-3 text-xs leading-relaxed text-muted-foreground"
+      className="bg-sidebar px-4 py-3 text-xs leading-relaxed text-muted-foreground"
     >
-      <h3 className="mb-1.5 text-xs font-medium text-foreground">
-        What&apos;s new
+      <h3 className="mb-2 text-xs font-medium text-foreground">
+        What&apos;s new in bb {version}
+        {releaseDate === undefined ? null : (
+          <span className="font-normal text-muted-foreground">
+            {` · ${releaseDate}`}
+          </span>
+        )}
       </h3>
       {entry === null ? (
         <p>bb {version} has no release notes in the app.</p>
@@ -131,7 +138,9 @@ export function ReleaseNotesPanel({ id, version }: ReleaseNotesPanelProps) {
               </div>
             ))}
           </div>
-          {moreBelow ? <OverflowFade placement="below" inset /> : null}
+          {moreBelow ? (
+            <OverflowFade placement="below" tone="sidebar" inset />
+          ) : null}
         </div>
       )}
       <div className="mt-2 flex justify-end">
