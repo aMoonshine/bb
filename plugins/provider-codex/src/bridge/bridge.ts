@@ -492,14 +492,6 @@ interface CodexBridgeSession {
 
 const sessionsByBbThreadId = new Map<string, CodexBridgeSession>();
 const maintenanceConnections = new Set<CodexAppServerConnection>();
-let modelListConnection: {
-  launchKey: string;
-  connection: CodexAppServerConnection;
-} | null = null;
-let modelListConnectionPromise: {
-  launchKey: string;
-  promise: Promise<CodexAppServerConnection>;
-} | null = null;
 let sessionSerialCounter = 0;
 let configuredSkillExtraRoots: string[] | null = null;
 
@@ -1392,7 +1384,21 @@ async function constructThreadSession(
     }
     const modelCatalog = loadSessionModelCatalog(connection);
     session.modelCatalog = modelCatalog;
-    void modelCatalog.then((catalog) => publishDaybreakState(session, catalog));
+    void modelCatalog.then((catalog) => {
+      if (!session.closing && catalog !== null) {
+        sendThreadDeltas(session, [
+          {
+            kind: "extension.state",
+            extensionKind: "bb/provider-model-catalog",
+            payload: {
+              models: catalog.models,
+              selectedOnlyModels: catalog.selectedOnlyModels,
+            },
+          },
+        ]);
+      }
+      publishDaybreakState(session, catalog);
+    });
     return { session, codexThreadId };
   } catch (error) {
     const released = session.closing;
@@ -1489,8 +1495,10 @@ async function rebuildThreadSession(
 
 async function withMaintenanceChild<T>(
   fn: (connection: CodexAppServerConnection) => Promise<T>,
+  envVars?: Readonly<Record<string, string>>,
 ): Promise<T> {
   const connection = spawnChildConnection({
+    envVars,
     recordThreadId: null,
     onNotification: () => {},
     onRequest: (_method, _params, responder) => {
@@ -1509,88 +1517,6 @@ async function withMaintenanceChild<T>(
     maintenanceConnections.delete(connection);
     await connection.kill();
   }
-}
-
-function poolRouteLaunchKey(
-  envVars: Readonly<Record<string, string>> | undefined,
-): string {
-  return JSON.stringify([
-    envVars?.[CODEX_POOL_BASE_URL_ENV] ?? null,
-    envVars?.[CODEX_POOL_AUTH_TOKEN_ENV] ?? null,
-  ]);
-}
-
-async function getModelListConnection(
-  envVars: Readonly<Record<string, string>> | undefined,
-): Promise<CodexAppServerConnection> {
-  const launchKey = poolRouteLaunchKey(envVars);
-  if (modelListConnection !== null) {
-    if (
-      modelListConnection.launchKey === launchKey &&
-      !modelListConnection.connection.exited
-    ) {
-      return modelListConnection.connection;
-    }
-    retireModelListConnection(modelListConnection.connection);
-  }
-  if (modelListConnectionPromise?.launchKey === launchKey) {
-    return modelListConnectionPromise.promise;
-  }
-
-  const pending = {
-    launchKey,
-    promise: (async () => {
-      const connection = spawnChildConnection({
-        envVars,
-        recordThreadId: null,
-        onNotification: () => {},
-        onRequest: (_method, _params, responder) => {
-          responder.error(
-            BRIDGE_JSON_RPC_ERRORS.METHOD_NOT_FOUND,
-            "model-list codex app-server does not serve requests",
-          );
-        },
-        onExit: () => {
-          maintenanceConnections.delete(connection);
-          if (modelListConnection?.connection === connection) {
-            modelListConnection = null;
-          }
-        },
-      });
-      maintenanceConnections.add(connection);
-      try {
-        await initializeChild(connection);
-      } catch (error) {
-        maintenanceConnections.delete(connection);
-        await connection.kill();
-        throw error;
-      }
-      if (modelListConnectionPromise?.launchKey !== launchKey) {
-        retireModelListConnection(connection);
-        throw new Error(
-          "The Codex model list route changed while the app-server started.",
-        );
-      }
-      modelListConnection = { launchKey, connection };
-      return connection;
-    })(),
-  };
-  modelListConnectionPromise = pending;
-  try {
-    return await pending.promise;
-  } finally {
-    if (modelListConnectionPromise === pending) {
-      modelListConnectionPromise = null;
-    }
-  }
-}
-
-function retireModelListConnection(connection: CodexAppServerConnection): void {
-  maintenanceConnections.delete(connection);
-  if (modelListConnection?.connection === connection) {
-    modelListConnection = null;
-  }
-  connection.kill();
 }
 
 async function withChildForThread<T>(
@@ -1637,40 +1563,37 @@ async function handleModelList(
   id: string | number,
   params: z.infer<typeof modelListParamsSchema>,
 ): Promise<void> {
-  let connection: CodexAppServerConnection | null = null;
   try {
-    connection = await getModelListConnection(params.envVars);
-    const result = await connection.request({
-      method: "model/list",
-      params: {},
-      resultSchema: ignoredChildResultSchema,
-      timeoutMs: CHILD_REQUEST_TIMEOUT_MS,
-    });
-    const { models, selectedOnlyModels } = parseModelCatalog(result);
-    const configuredModel = await connection
-      .request({
-        method: "config/read",
+    await withMaintenanceChild(async (connection) => {
+      const result = await connection.request({
+        method: "model/list",
         params: {},
-        resultSchema: z.object({
-          config: z.object({ model: z.string().nullish() }),
-        }),
+        resultSchema: ignoredChildResultSchema,
         timeoutMs: CHILD_REQUEST_TIMEOUT_MS,
-      })
-      .then((configResult) => configResult.config.model)
-      .catch(() => null);
-    if (models.some((model) => model.model === configuredModel)) {
-      for (const model of models) {
-        model.isDefault = model.model === configuredModel;
+      });
+      const { models, selectedOnlyModels } = parseModelCatalog(result);
+      const configuredModel = await connection
+        .request({
+          method: "config/read",
+          params: {},
+          resultSchema: z.object({
+            config: z.object({ model: z.string().nullish() }),
+          }),
+          timeoutMs: CHILD_REQUEST_TIMEOUT_MS,
+        })
+        .then((configResult) => configResult.config.model)
+        .catch(() => null);
+      if (models.some((model) => model.model === configuredModel)) {
+        for (const model of models) {
+          model.isDefault = model.model === configuredModel;
+        }
       }
-    }
-    sendResult(id, {
-      models,
-      selectedOnlyModels,
-    });
+      sendResult(id, {
+        models,
+        selectedOnlyModels,
+      });
+    }, params.envVars);
   } catch (error) {
-    if (connection !== null) {
-      retireModelListConnection(connection);
-    }
     sendError(
       id,
       isCodexSpawnFailure(error)
@@ -2649,8 +2572,6 @@ function killAllChildren(): void {
     session.connection = null;
   }
   sessionsByBbThreadId.clear();
-  modelListConnection = null;
-  modelListConnectionPromise = null;
   for (const connection of maintenanceConnections) {
     connection.kill();
   }
